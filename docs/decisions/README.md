@@ -12,3 +12,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 
 | ADR | Title | Status |
 |---|---|---|
+| [0001](0001-partial-scope-three-domains.md) | Partial scope: three domains across three deployables | Accepted |

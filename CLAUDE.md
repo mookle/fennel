@@ -50,6 +50,18 @@ These rules apply to general chat conversation.
 - Do not generate a recap unless explicitly asked to do so.
 - Resolve questions before acting. Even when given a list of actionable items, resolve remaining questions before executing any actions.
 
+## Naming rules
+
+`docs/ARCHITECTURE.md` defines every domain term. Read it before you name anything. These are the distinctions to get right without a lookup:
+
+- **A lowercase name in code format is a service, and the same word capitalised is a domain concept.** `cart` is the service, and Cart is the container it holds. `order` is the service, and Order is the unit of obligation it creates.
+
+## Load-bearing invariants
+
+These govern the relationships between components: what each service owns, and which of them may talk to which. Every one cites the ADR that decided it, and the prime directives above say what it takes to change one.
+
+- **Three deployables**: `product` (Go), `cart` (Elixir), `order` (Elixir). `shop_id` and `user_id` are opaque identifiers with no backing service (ADR-0001).
+
 ## Version control
 
 - This is a **Jujutsu (`jj`) repo colocated with git**. The standard `git` commands work.
