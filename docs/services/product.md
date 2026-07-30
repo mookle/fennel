@@ -71,6 +71,25 @@ Labels are the platform's categorisation tags, and they drive the site categorie
 
 One tax type, no rates and no logic. Tax is out of scope. Do not model tax tables.
 
+## API surface
+
+`contracts/product.openapi.yaml` holds the full contract. There are two audiences.
+
+**Consumed by `cart` (must stay stable):**
+
+- `GET /v1/products`: catalogue query and search. The filters are `shop_id`, `label`, `q` and `status`. The results are paginated. The public read returns `active` products only.
+- `GET /v1/products/{id}`: product detail with the attributes, the options and the SKUs.
+- `GET /v1/skus/{id}`: SKU lookup.
+
+**Product-domain management (this service's own surface):**
+
+- `POST /v1/products` and `PATCH /v1/products/{id}`: create and update a product, including a validated status transition.
+- `POST /v1/products/{id}/attributes`: add an attribute with its options.
+- `POST /v1/skus`: create a SKU from a combination of options, with an initial `available_quantity`.
+- `GET /v1/labels` and `POST /v1/labels`: list the canonical labels, and create one with optional aliases.
+
+The contract holds nothing else. Deletion, option removal and later stock corrections have no endpoint in this build.
+
 ## Persistence
 
 `product` owns its own Postgres database. The suggested tables mirror the model above: `products`, `attributes`, `attribute_options`, `skus`, `sku_options`, `labels`, `label_aliases`, `product_labels`. No service queries another's database (ADR-0002).

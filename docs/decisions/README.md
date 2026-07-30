@@ -14,3 +14,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 |---|---|---|
 | [0001](0001-partial-scope-three-domains.md) | Partial scope: three domains across three deployables | Accepted |
 | [0002](0002-no-shared-databases.md) | No service shares a database | Accepted |
+| [0003](0003-rest-openapi-for-sync-reads.md) | REST and OpenAPI for synchronous reads | Accepted |

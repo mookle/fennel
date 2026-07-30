@@ -1,0 +1,308 @@
+openapi: 3.1.0
+info:
+  title: Fennel product
+  version: "0.1.0"
+  description: >
+    The product catalogue for Fennel. This service owns products, SKUs,
+    attributes and options, labels, and shipping cost calculation. The cart
+    service consumes the read endpoints, so those must stay stable. The
+    management endpoints are the own surface of the product domain.
+servers:
+  - url: http://product.internal/v1
+    description: In-cluster base URL
+tags:
+  - name: catalogue
+    description: Read endpoints consumed by the cart service (stable contract)
+  - name: products
+    description: Product-domain management
+  - name: skus
+    description: SKU management
+  - name: labels
+
+paths:
+  /products:
+    get:
+      tags: [catalogue]
+      summary: Query/search the catalogue
+      parameters:
+        - { name: shop_id, in: query, schema: { type: string } }
+        - { name: label, in: query, schema: { type: string }, description: canonical label slug }
+        - { name: q, in: query, schema: { type: string }, description: free-text search }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/ProductStatus' }, description: defaults to active for public reads }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: page_size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        '200':
+          description: Page of products
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, page_size, total]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Product' } }
+                  page: { type: integer }
+                  page_size: { type: integer }
+                  total: { type: integer }
+    post:
+      tags: [products]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductWrite' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /products/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [catalogue]
+      summary: Get a product with attributes, options and SKUs
+      responses:
+        '200':
+          description: Product detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [products]
+      summary: Update a product or transition its status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductPatch' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: The business rules reject the change, for example a status transition that is not allowed from the current status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /products/{id}/attributes:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [products]
+      summary: Add an attribute (with options) to a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AttributeWrite' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Attribute' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /skus:
+    post:
+      tags: [skus]
+      summary: Create a SKU from a combination of attribute options
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SkuWrite' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Sku' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /skus/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [catalogue]
+      summary: Look up a SKU
+      responses:
+        '200':
+          description: The SKU
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Sku' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /labels:
+    get:
+      tags: [labels]
+      summary: List canonical labels (drives site categories)
+      responses:
+        '200':
+          description: Labels
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Label' } }
+    post:
+      tags: [labels]
+      summary: Create a label (optionally with aliases)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LabelWrite' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Label' }
+
+components:
+  schemas:
+    ProductStatus:
+      type: string
+      enum: [incomplete, active, hidden, archived, reported, deleted]
+    BillingType:
+      type: string
+      description: The payment flow for the product. Recurring products carry a billing_period.
+      enum: [immediate, recurring]
+
+    Product:
+      type: object
+      required: [id, shop_id, name, status, currency]
+      properties:
+        id: { type: string, example: "prd_01HZA1" }
+        shop_id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        status: { $ref: '#/components/schemas/ProductStatus' }
+        base_price: { type: string, description: a decimal amount. JSON has no decimal type, so it travels as a string }
+        currency: { type: string, description: ISO-4217 code }
+        billing_type: { $ref: '#/components/schemas/BillingType' }
+        billing_period: { type: string, nullable: true, description: an ISO-8601 duration. Present only when billing_type is recurring }
+        label_slugs: { type: array, items: { type: string } }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, nullable: true }
+    ProductDetail:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          properties:
+            attributes: { type: array, items: { $ref: '#/components/schemas/Attribute' } }
+            skus: { type: array, items: { $ref: '#/components/schemas/Sku' } }
+    ProductWrite:
+      type: object
+      required: [shop_id, name, currency]
+      properties:
+        shop_id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        currency: { type: string }
+        base_price: { type: string }
+        billing_type: { $ref: '#/components/schemas/BillingType' }
+        billing_period: { type: string, nullable: true }
+        label_slugs: { type: array, items: { type: string } }
+    ProductPatch:
+      type: object
+      description: Any subset of the fields. The service validates a status change against the allowed transitions.
+      properties:
+        name: { type: string }
+        description: { type: string }
+        base_price: { type: string }
+        billing_type: { $ref: '#/components/schemas/BillingType' }
+        billing_period: { type: string, nullable: true }
+        status: { $ref: '#/components/schemas/ProductStatus' }
+        label_slugs: { type: array, items: { type: string } }
+
+    Attribute:
+      type: object
+      required: [id, product_id, name, options]
+      properties:
+        id: { type: string, example: "att_01HZA4" }
+        product_id: { type: string }
+        name: { type: string }
+        options: { type: array, items: { $ref: '#/components/schemas/AttributeOption' } }
+    AttributeOption:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, example: "opt_01HZA5" }
+        name: { type: string }
+    AttributeWrite:
+      type: object
+      required: [name, options]
+      properties:
+        name: { type: string }
+        options:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [name]
+            properties:
+              name: { type: string }
+
+    Sku:
+      type: object
+      required: [id, product_id, code, price, currency, available_quantity]
+      properties:
+        id: { type: string, example: "sku_01HZA7" }
+        product_id: { type: string }
+        code: { type: string, description: generated by the server from the product name, a per-shop counter and the applied option codes, example: "TS0LBLK" }
+        price: { type: string }
+        currency: { type: string }
+        available_quantity: { type: integer, minimum: 0 }
+        option_ids: { type: array, items: { type: string } }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, nullable: true }
+    SkuWrite:
+      type: object
+      required: [product_id, option_ids, price, available_quantity]
+      properties:
+        product_id: { type: string }
+        option_ids: { type: array, items: { type: string }, description: one option per attribute the product holds. Empty for a product with no attributes }
+        price: { type: string }
+        available_quantity: { type: integer, minimum: 0 }
+
+    Label:
+      type: object
+      required: [id, name, slug]
+      properties:
+        id: { type: string, example: "lbl_01HZA9" }
+        name: { type: string, description: canonical }
+        slug: { type: string }
+        aliases: { type: array, items: { type: string } }
+    LabelWrite:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        aliases: { type: array, items: { type: string } }
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details: { type: array, items: { type: string } }
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: Not found
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }

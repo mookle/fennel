@@ -62,6 +62,7 @@ These govern the relationships between components: what each service owns, and w
 
 - **Three deployables**: `product` (Go), `cart` (Elixir), `order` (Elixir). No shared database. `shop_id` and `user_id` are opaque identifiers with no backing service (ADR-0002, ADR-0001).
 - **One database per service.** No service queries another's database (ADR-0002).
+- **Synchronous reads go over REST and OpenAPI**, not gRPC (ADR-0003).
 
 ## Version control
 
