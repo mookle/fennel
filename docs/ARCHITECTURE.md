@@ -29,3 +29,11 @@ This section defines each term once, and it is the source of truth for all of th
 **The concepts.**
 
 - **Cart**: the container for an intended order. It owns line items, addresses and payment method. It can hold line items from more than one shop.
+
+## Data conventions
+
+These rules bind every schema and every payload in the build, and this section is the source of truth for them. The set predates this build, carried over from the original spec, and the load-bearing ones have no record behind them yet.
+
+- Text is UTF-8. Prefer correct i18n and sorting over micro-optimisation.
+- `created_at` marks the insertion. `updated_at` stays NULL until something writes the row, so one column doubles as the flag for whether the row has ever changed.
+- An entity's own field is unqualified, and a field holding another entity's value carries that entity's name. `Order.id` and `Sku.code` are bare, while `OrderSku.order_id`, `OrderSku.sku_code` and every `ResolvedSku` field are qualified, because they reference or copy what another entity owns.
