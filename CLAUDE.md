@@ -60,7 +60,8 @@ These rules apply to general chat conversation.
 
 These govern the relationships between components: what each service owns, and which of them may talk to which. Every one cites the ADR that decided it, and the prime directives above say what it takes to change one.
 
-- **Three deployables**: `product` (Go), `cart` (Elixir), `order` (Elixir). `shop_id` and `user_id` are opaque identifiers with no backing service (ADR-0001).
+- **Three deployables**: `product` (Go), `cart` (Elixir), `order` (Elixir). No shared database. `shop_id` and `user_id` are opaque identifiers with no backing service (ADR-0002, ADR-0001).
+- **One database per service.** No service queries another's database (ADR-0002).
 
 ## Version control
 

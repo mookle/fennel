@@ -13,6 +13,10 @@ The model keeps two entities, **item and group**, with the group (the Order) as 
 - `Order` (the group): `id` (`order_id`), `user_id`, `shop_id`, `delivery_address` (a snapshot), `status`, `created_at`.
 - `OrderSku` (the item): `order_id`, `sku_id`, `sku_code`, `name`, `description`, `unit_price`, `currency`, `quantity`, `line_shipping_cost`.
 
+## Persistence
+
+`order` owns its own Postgres database. No service queries another's database (ADR-0002).
+
 ## Out of scope
 
 Dispatch and delivery tracking, returns and exchanges, order merging, and stock reservation.

@@ -71,6 +71,10 @@ Labels are the platform's categorisation tags, and they drive the site categorie
 
 One tax type, no rates and no logic. Tax is out of scope. Do not model tax tables.
 
+## Persistence
+
+`product` owns its own Postgres database. The suggested tables mirror the model above: `products`, `attributes`, `attribute_options`, `skus`, `sku_options`, `labels`, `label_aliases`, `product_labels`. No service queries another's database (ADR-0002).
+
 ## Not in scope
 
 Seller UI, images (a product image is an opaque identifier at most), reporting, tax, and reservations.

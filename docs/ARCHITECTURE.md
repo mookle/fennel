@@ -23,8 +23,16 @@ This section defines each term once, and it is the source of truth for all of th
 **The services.**
 
 - **`product`**: the Go service. It owns the Product domain: products, SKUs, attributes and options, labels, stock, and shipping cost calculation. It straddles what a fuller build splits into Catalogue, Inventory and Pricing. Seller management UIs are out of scope.
-- **`cart`**: the Elixir service that holds the cart and the checkout procedure that submits it.
+- **`cart`**: the Elixir service that holds the cart and the checkout procedure that submits it. It is the only synchronous consumer of `product`.
 - **`order`**: the Elixir service that creates Orders and runs the order state machine.
+
+## Service boundaries
+
+Three services connect. The services share nothing: no common database and no identity service. `shop_id` and `user_id` are opaque identifiers.
+
+Each service owns its own database, and no service reaches into another's (ADR-0002). Cross-service consistency comes from snapshotting and idempotent processing rather than from distributed transactions.
+
+### Domain language, continued
 
 **The concepts.**
 

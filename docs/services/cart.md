@@ -15,6 +15,10 @@ A cart organises items (potentially from multiple shops), the payment method and
 
 The model puts `payment_method_ref` on the cart, because selection is intent. Nothing consumes it while payment is out of scope (ADR-0001).
 
+## Persistence
+
+`cart` owns its own Postgres database. No service queries another's database (ADR-0002).
+
 ## Out of scope
 
 Payment method capture beyond an opaque reference, vouchers, saved carts across devices, stock reservation or holds, price locks, and cart merging. User and Shop are opaque identifiers.
