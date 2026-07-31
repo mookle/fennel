@@ -66,6 +66,7 @@ These govern the relationships between components: what each service owns, and w
 - **One database per service.** No service queries another's database (ADR-0002).
 - **Stock decrements only on `order.accepted`**, which is the moment a shop commits, not the moment a buyer submits. There is no reservation and no hold. This build accepts the oversell (ADR-0005).
 - **Crystallisation**: order data is an immutable copy, never a live reference (ADR-0004).
+- **Service-to-service auth** is a shared bearer token inside the cluster. There is no mTLS (ADR-0008).
 - **Synchronous reads go over REST and OpenAPI**, not gRPC. **Asynchronous messages go over RabbitMQ.** Delivery is **at-least-once, with idempotent, deduped consumers** (ADR-0003, ADR-0006).
 
 ## Version control

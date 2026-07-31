@@ -19,3 +19,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0005](0005-stock-decrement-via-event.md) | Stock decrement via event | Accepted |
 | [0006](0006-event-broker-rabbitmq.md) | Event broker: RabbitMQ | Accepted |
 | [0007](0007-shipping-in-product-domain.md) | The product domain computes shipping, and orders treat it as opaque | Accepted |
+| [0008](0008-service-auth-bearer-token.md) | Service-to-service auth through a shared bearer token | Accepted |

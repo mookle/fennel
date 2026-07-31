@@ -10,6 +10,8 @@ info:
 servers:
   - url: http://product.internal/v1
     description: In-cluster base URL
+security:
+  - internalBearer: []
 tags:
   - name: catalogue
     description: Read endpoints consumed by the cart service (stable contract)
@@ -222,6 +224,12 @@ paths:
               schema: { $ref: '#/components/schemas/Label' }
 
 components:
+  securitySchemes:
+    internalBearer:
+      type: http
+      scheme: bearer
+      description: Shared in-cluster bearer token. No mTLS in this build (ADR-0008).
+
   schemas:
     ProductStatus:
       type: string
