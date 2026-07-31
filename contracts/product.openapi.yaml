@@ -18,6 +18,7 @@ tags:
   - name: skus
     description: SKU management
   - name: labels
+  - name: shipping
 
 paths:
   /products:
@@ -170,6 +171,30 @@ paths:
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/ResolvedSku' } }
                   missing: { type: array, items: { type: string } }
+
+  /shipping/quote:
+    post:
+      tags: [shipping]
+      summary: Quote shipping for a set of lines to a destination
+      description: >
+        The cost calculation lives in the product domain and is opaque to
+        its callers. Callers should group by shop before quoting.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ShippingQuoteRequest' }
+      responses:
+        '200':
+          description: Per-line and total shipping cost
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ShippingQuoteResponse' }
+        '422':
+          description: One or more lines cannot ship to the destination
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /labels:
     get:
@@ -330,6 +355,40 @@ components:
             properties:
               attribute: { type: string }
               value: { type: string }
+
+    ShippingQuoteRequest:
+      type: object
+      required: [destination, items]
+      properties:
+        destination:
+          type: object
+          required: [country_id]
+          properties:
+            country_id: { type: string }
+            region_id: { type: string, nullable: true }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [sku_id, quantity]
+            properties:
+              sku_id: { type: string }
+              quantity: { type: integer, minimum: 1 }
+    ShippingQuoteResponse:
+      type: object
+      required: [currency, lines, total]
+      properties:
+        currency: { type: string }
+        lines:
+          type: array
+          items:
+            type: object
+            required: [sku_id, cost]
+            properties:
+              sku_id: { type: string }
+              cost: { type: string }
+        total: { type: string }
 
     Label:
       type: object

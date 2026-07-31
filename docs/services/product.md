@@ -79,6 +79,16 @@ Labels are the platform's categorisation tags, and they drive the site categorie
 - `LabelAlias`: `id`, `label_id`, `alias`. An alternative spelling that resolves to its label.
 - `ProductLabel`: `product_id`, `label_id`. The assignment join: one row attaches one label to one product.
 
+### ShippingRule
+
+`product` owns the shipping rules, and they are opaque to the callers. A shop defines which countries and regions a product ships to, and any extra cost beyond the first unit.
+
+- `ShippingRule`: `id`, `product_id`, `country_id` (nullable), `region_id` (nullable), `first_unit_cost`, `additional_unit_cost`, `currency`.
+
+Country and region rules are optional, which rules out a clean composite key. `id` is therefore a surrogate key. Store both country and region as positive ids.
+
+When more than one rule matches a destination, the most specific rule wins: a region rule beats a country rule. The quote endpoint is opaque to its callers, so this resolution rule lives entirely in `product`.
+
 ## Tax
 
 One tax type, no rates and no logic. Tax is out of scope. Do not model tax tables.
@@ -92,6 +102,7 @@ One tax type, no rates and no logic. Tax is out of scope. Do not model tax table
 - `GET /v1/products`: catalogue query and search. The filters are `shop_id`, `label`, `q` and `status`. The results are paginated. The public read returns `active` products only.
 - `GET /v1/products/{id}`: product detail with the attributes, the options and the SKUs.
 - `GET /v1/skus/{id}` and `POST /v1/skus:batchGet`: the `ResolvedSku` payloads that cart and checkout consume. Each response is self-contained: `sku_code`, `product_id`, `shop_id`, `name`, `description`, `price`, `currency`, `available_quantity`, and the resolved options.
+- `POST /v1/shipping/quote`: takes `{ destination, items[] }` and returns the per-line and total shipping cost. The caller (checkout) treats the result as opaque.
 
 **Product-domain management (this service's own surface):**
 
@@ -100,7 +111,7 @@ One tax type, no rates and no logic. Tax is out of scope. Do not model tax table
 - `POST /v1/skus`: create a SKU from a combination of options, with an initial `available_quantity`.
 - `GET /v1/labels` and `POST /v1/labels`: list the canonical labels, and create one with optional aliases.
 
-The contract holds nothing else. Deletion, option removal and later stock corrections have no endpoint in this build.
+The contract holds nothing else. Deletion, option removal, later stock corrections and shipping-rule management have no endpoint in this build; seed data writes the `shipping_rules` rows directly.
 
 ## Event consumption
 
@@ -113,7 +124,7 @@ The contract holds nothing else. Deletion, option removal and later stock correc
 
 ## Persistence
 
-`product` owns its own Postgres database. The suggested tables mirror the model above: `products`, `attributes`, `attribute_options`, `skus`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`, and `processed_events` for idempotency. No service queries another's database (ADR-0002).
+`product` owns its own Postgres database. The suggested tables mirror the model above: `products`, `attributes`, `attribute_options`, `skus`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`, `shipping_rules`, and `processed_events` for idempotency. No service queries another's database (ADR-0002).
 
 ## Not in scope
 
