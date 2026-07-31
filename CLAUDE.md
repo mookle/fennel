@@ -63,11 +63,15 @@ These rules apply to general chat conversation.
 These govern the relationships between components: what each service owns, and which of them may talk to which. Every one cites the ADR that decided it, and the prime directives above say what it takes to change one.
 
 - **Three deployables**: `product` (Go), `cart` (Elixir), `order` (Elixir). No shared database. `shop_id` and `user_id` are opaque identifiers with no backing service (ADR-0002, ADR-0001).
-- **One database per service.** No service queries another's database (ADR-0002).
+- **One database per service.** No service queries another's database (ADR-0002, ADR-0009).
 - **Stock decrements only on `order.accepted`**, which is the moment a shop commits, not the moment a buyer submits. There is no reservation and no hold. This build accepts the oversell (ADR-0005).
 - **Crystallisation**: order data is an immutable copy, never a live reference (ADR-0004).
 - **Service-to-service auth** is a shared bearer token inside the cluster. There is no mTLS (ADR-0008).
 - **Synchronous reads go over REST and OpenAPI**, not gRPC. **Asynchronous messages go over RabbitMQ.** Delivery is **at-least-once, with idempotent, deduped consumers** (ADR-0003, ADR-0006).
+
+## Deployment target
+
+Local first on **kind**, which is the default smoke-test environment. **GCP** is the cloud target, with GKE and Artifact Registry. Postgres runs in the cluster for dev, and Cloud SQL is a prod-only upgrade. Destroy the stack when it is idle (ADR-0009).
 
 ## Version control
 

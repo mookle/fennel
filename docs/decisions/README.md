@@ -20,3 +20,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0006](0006-event-broker-rabbitmq.md) | Event broker: RabbitMQ | Accepted |
 | [0007](0007-shipping-in-product-domain.md) | The product domain computes shipping, and orders treat it as opaque | Accepted |
 | [0008](0008-service-auth-bearer-token.md) | Service-to-service auth through a shared bearer token | Accepted |
+| [0009](0009-gcp-cloud-target-kind-locally.md) | Cloud platform: GCP is the cloud target, and kind runs locally | Accepted |

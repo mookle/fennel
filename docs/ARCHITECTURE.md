@@ -47,6 +47,12 @@ Each service owns its own database, and no service reaches into another's (ADR-0
 - **Accepted**: a seller fact. It occurs when a shop commits to fulfil an Order. In a marketplace the shop is a third party that can decline, so the two moments are distinct (ADR-0005).
 - **Rejected**: a seller fact. It occurs when a shop does not commit to an Order. The reasons vary, for example repeated declined payment attempts, or an unrealistic custom order. In practice this state is rare. Most shops accept incoming orders automatically.
 
+## Deployment (ADR-0009)
+
+- **Local first**: a **kind** cluster is the default smoke-test environment. It runs Postgres and RabbitMQ in the cluster.
+- **GCP** is the cloud target, with GKE for the cluster and Artifact Registry for the images. Destroy the stack when it is idle.
+- Each service owns its **own Postgres database**. The databases run in the cluster for dev, and Cloud SQL is a prod-only upgrade. No service reaches another service's database.
+
 ## Data conventions
 
 These rules bind every schema and every payload in the build, and this section is the source of truth for them. The set predates this build, carried over from the original spec, and the load-bearing ones have no record behind them yet.

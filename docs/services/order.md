@@ -37,7 +37,7 @@ Implement the machine as an explicit transition module. Validate every transitio
 
 ## Persistence
 
-`order` owns its own Postgres database. No service queries another's database (ADR-0002).
+`order` owns its own Postgres database (ADR-0009). No service queries another's database (ADR-0002).
 
 ## Out of scope
 

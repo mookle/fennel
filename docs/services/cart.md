@@ -17,7 +17,7 @@ The model puts `payment_method_ref` on the cart, because selection is intent. No
 
 ## Persistence
 
-`cart` owns its own Postgres database. No service queries another's database (ADR-0002).
+`cart` owns its own Postgres database (ADR-0009). No service queries another's database (ADR-0002).
 
 ## Out of scope
 
