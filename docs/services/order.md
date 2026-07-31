@@ -12,6 +12,7 @@ The model keeps two entities, **item and group**, with the group (the Order) as 
 
 - `Order` (the group): `id` (`order_id`), `user_id`, `shop_id`, `delivery_address` (a snapshot), `status`, `created_at`.
 - `OrderSku` (the item): an immutable crystallised snapshot. **Nobody can edit it, and it has no status** (ADR-0004). Fields: `order_id`, `sku_id` (the source reference), `sku_code`, `name`, `description`, `unit_price`, `currency`, `billing_type`, `billing_period`, `quantity`, `line_shipping_cost`.
+- `processed_events`: the consumer's dedupe ledger, and infrastructure rather than domain: the primary key is what makes at-least-once delivery unable to act twice (ADR-0006). Each consuming service keeps its own, and `product` has an equivalent keyed on `order_id`.
 
 ## Order state machine
 
@@ -30,7 +31,9 @@ Implement the machine as an explicit transition module. Validate every transitio
 
 ## Events
 
-**Emitted:** `order.accepted`, one message per accepted order, consumed by `product` for the stock decrement (ADR-0005).
+**Emitted:** `order.accepted`, one message per accepted order, consumed by `product` for the stock decrement (ADR-0005). Delivery is at-least-once, and `product` dedupes on `order_id`.
+
+`placed` is a state, not an event. Nothing consumes one, so `order` emits none (ADR-0005).
 
 ## Persistence
 

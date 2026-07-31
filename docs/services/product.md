@@ -104,15 +104,16 @@ The contract holds nothing else. Deletion, option removal and later stock correc
 
 ## Event consumption
 
-`product` consumes `order.accepted`. On receipt, decrement `sku_stock.available_quantity` for each `sku_id` in the payload.
+`product` consumes `order.accepted` from the broker (see `contracts/events.md`). On receipt, decrement `sku_stock.available_quantity` for each `sku_id` in the payload.
 
+- Delivery is **at-least-once**. The handler must be **idempotent** on `order_id`. Persist the processed order ids, and ignore the duplicates.
 - The decrement is the only change another service can trigger, and it is never a direct call (ADR-0002).
 - Stock moves on **acceptance**, the point where a shop commits to fulfil the order (ADR-0005). It does not move on placement. Placement is a buyer fact and carries no commitment.
 - **Deferred (scaling note):** there is no reservation and no temporary hold. Two near-simultaneous checkouts for the last unit can both pass the synchronous pre-submission check and oversell. This is acceptable for the demo. A hold or reservation mechanism is future work (see ADR-0005).
 
 ## Persistence
 
-`product` owns its own Postgres database. The suggested tables mirror the model above: `products`, `attributes`, `attribute_options`, `skus`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`. No service queries another's database (ADR-0002).
+`product` owns its own Postgres database. The suggested tables mirror the model above: `products`, `attributes`, `attribute_options`, `skus`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`, and `processed_events` for idempotency. No service queries another's database (ADR-0002).
 
 ## Not in scope
 
