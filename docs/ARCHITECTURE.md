@@ -22,9 +22,9 @@ This section defines each term once, and it is the source of truth for all of th
 
 **The services.**
 
-- **`product`**: the Go service. It owns the Product domain: products, SKUs, attributes and options, labels, stock, and shipping cost calculation. It straddles what a fuller build splits into Catalogue, Inventory and Pricing. Seller management UIs are out of scope.
+- **`product`**: the Go service. It owns the Product domain: products, SKUs, attributes and options, labels, stock, and shipping cost calculation. It straddles what a fuller build splits into Catalogue, Inventory and Pricing. The schema draws only the Catalogue and Inventory line (`sku_stock`). Seller management UIs are out of scope.
 - **`cart`**: the Elixir service that holds the cart and the checkout procedure that submits it. It is the only synchronous consumer of `product`.
-- **`order`**: the Elixir service that creates Orders and runs the order state machine.
+- **`order`**: the Elixir service that creates Orders and runs the order state machine to acceptance. It never reads `product`.
 
 ## Service boundaries
 
@@ -40,6 +40,12 @@ Each service owns its own database, and no service reaches into another's (ADR-0
 
 - **Cart**: the container for an intended order. It owns line items, addresses and payment method. It can hold line items from more than one shop.
 - **OrderSku**: the immutable crystallised snapshot of a SKU at the moment an order is created. Nobody can edit it, and it has no status (ADR-0004). `docs/services/order.md` lists its fields.
+
+**The facts.**
+
+- **Placed**: a buyer fact, the record that the buyer submitted. `order` sets it on each Order it creates (ADR-0005).
+- **Accepted**: a seller fact. It occurs when a shop commits to fulfil an Order. In a marketplace the shop is a third party that can decline, so the two moments are distinct (ADR-0005).
+- **Rejected**: a seller fact. It occurs when a shop does not commit to an Order. The reasons vary, for example repeated declined payment attempts, or an unrealistic custom order. In practice this state is rare. Most shops accept incoming orders automatically.
 
 ## Data conventions
 

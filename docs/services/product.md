@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`product` owns the product catalogue: products, SKUs, attributes and their options, labels, stock, and shipping cost calculation. It serves synchronous reads to `cart`. This service exposes the API surface only, the seller front end is out of scope.
+`product` owns the product catalogue: products, SKUs, attributes and their options, labels, stock, and shipping cost calculation. It serves synchronous reads to `cart`. It consumes `order.accepted` events and decrements stock. This service exposes the API surface only, the seller front end is out of scope.
 
 `shop_id` is an opaque identifier that an out-of-scope Shop domain owns.
 
@@ -48,16 +48,28 @@ Attributes are optional: a product has 0-n attributes, and each attribute has 1-
 
 The sellable, orderable unit. The shop creates each SKU by hand from a chosen combination of attribute options, then sets the available quantity. A SKU carries one option for each attribute the product holds, and one SKU exists per distinct combination. On a product with no attributes the combination is empty, so the product carries at most one SKU.
 
-Fields: `id`, `product_id`, `code`, `price`, `currency`, `available_quantity`, `created_at`, `updated_at`.
+Fields: `id`, `product_id`, `code`, `price`, `currency`, `created_at`, `updated_at`.
 
 The server generates `code` from a prefix derived from the product name, a per-shop counter, and the code of each applied option. A product called "T-Shirt" in size large, colour black gets `TS0LBLK`.
 
 The applied option combination lives in the `sku_options` join table (`sku_id`, `option_id`), one row per applied option, and no rows for an option-less SKU. The API presents it as `option_ids`. A join table rather than an id array keeps the foreign keys real, and it answers "which SKUs use this option", which is the question SKU dynamism asks (see the notes below).
 
+Stock is **not** a column here. See SkuStock below.
+
 Notes:
 
 - The end user cannot edit a SKU.
 - SKUs are dynamic: if the shop removes an attribute option, the SKUs that used it are deleted, not archived. No endpoint removes an option in this build, so the rule is latent, but the boundary already absorbs it. `POST /v1/skus:batchGet` returns the missing ids so `cart` can fail the affected lines, and an accepted order needs nothing from the row because `order_sku` is the crystallised copy (ADR-0004).
+
+### SkuStock
+
+Stock lives in a separate, narrow table keyed by `sku_id`. It is not a column on `sku`.
+
+- `SkuStock`: `sku_id` (primary key, foreign key to `sku`), `available_quantity`, `created_at`, `updated_at`.
+
+The reason is the write profile, not tidiness. SKU rows are cold: every catalogue request reads the code and the price, and nothing rewrites them after creation. Stock is hot: the `order.accepted` consumer writes it on every acceptance. In Postgres an update rewrites the whole row, so on a combined table every decrement leaves a dead copy of the SKU row, and unless the update stays HOT it also touches the row's indexes. `sku_stock` carries no index beyond its primary key, which keeps the decrement HOT-eligible and keeps the vacuum churn off the table the read path depends on.
+
+A read that needs price and quantity together, such as `ResolvedSku`, joins the two tables.
 
 ### Label
 
@@ -90,9 +102,17 @@ One tax type, no rates and no logic. Tax is out of scope. Do not model tax table
 
 The contract holds nothing else. Deletion, option removal and later stock corrections have no endpoint in this build.
 
+## Event consumption
+
+`product` consumes `order.accepted`. On receipt, decrement `sku_stock.available_quantity` for each `sku_id` in the payload.
+
+- The decrement is the only change another service can trigger, and it is never a direct call (ADR-0002).
+- Stock moves on **acceptance**, the point where a shop commits to fulfil the order (ADR-0005). It does not move on placement. Placement is a buyer fact and carries no commitment.
+- **Deferred (scaling note):** there is no reservation and no temporary hold. Two near-simultaneous checkouts for the last unit can both pass the synchronous pre-submission check and oversell. This is acceptable for the demo. A hold or reservation mechanism is future work (see ADR-0005).
+
 ## Persistence
 
-`product` owns its own Postgres database. The suggested tables mirror the model above: `products`, `attributes`, `attribute_options`, `skus`, `sku_options`, `labels`, `label_aliases`, `product_labels`. No service queries another's database (ADR-0002).
+`product` owns its own Postgres database. The suggested tables mirror the model above: `products`, `attributes`, `attribute_options`, `skus`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`. No service queries another's database (ADR-0002).
 
 ## Not in scope
 

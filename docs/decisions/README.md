@@ -16,3 +16,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0002](0002-no-shared-databases.md) | No service shares a database | Accepted |
 | [0003](0003-rest-openapi-for-sync-reads.md) | REST and OpenAPI for synchronous reads | Accepted |
 | [0004](0004-order-sku-crystallisation.md) | Crystallise product data into an immutable OrderSku | Accepted |
+| [0005](0005-stock-decrement-via-event.md) | Stock decrement via event | Accepted |
