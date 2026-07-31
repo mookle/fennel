@@ -135,14 +135,41 @@ paths:
       - { name: id, in: path, required: true, schema: { type: string } }
     get:
       tags: [catalogue]
-      summary: Look up a SKU
+      summary: Resolve a SKU
       responses:
         '200':
-          description: The SKU
+          description: Resolved SKU
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Sku' }
+              schema: { $ref: '#/components/schemas/ResolvedSku' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /skus:batchGet:
+    post:
+      tags: [catalogue]
+      summary: Resolve many SKUs at once (cart/checkout)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku_ids]
+              properties:
+                sku_ids: { type: array, items: { type: string }, minItems: 1 }
+      responses:
+        '200':
+          description: >
+            Resolved SKUs for the ids that exist. missing lists ids that were
+            not found so the caller can fail the affected lines.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, missing]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/ResolvedSku' } }
+                  missing: { type: array, items: { type: string } }
 
   /labels:
     get:
@@ -275,6 +302,34 @@ components:
         option_ids: { type: array, items: { type: string }, description: one option per attribute the product holds. Empty for a product with no attributes }
         price: { type: string }
         available_quantity: { type: integer, minimum: 0 }
+
+    ResolvedSku:
+      type: object
+      description: >
+        A denormalised read model, not the SKU row: the SKU joined with its
+        product's name, description and shop_id, the resolved option names,
+        and the stock. It is self-contained so that checkout can crystallise
+        an order line from one payload with no follow-up read (ADR-0004).
+      required: [sku_id, product_id, shop_id, sku_code, name, price, currency, available_quantity]
+      properties:
+        sku_id: { type: string }
+        product_id: { type: string }
+        shop_id: { type: string }
+        sku_code: { type: string }
+        name: { type: string, description: product name at time of read }
+        description: { type: string }
+        price: { type: string }
+        currency: { type: string }
+        billing_type: { $ref: '#/components/schemas/BillingType' }
+        billing_period: { type: string, nullable: true }
+        available_quantity: { type: integer, minimum: 0 }
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              attribute: { type: string }
+              value: { type: string }
 
     Label:
       type: object

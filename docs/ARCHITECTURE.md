@@ -32,11 +32,14 @@ Three services connect. The services share nothing: no common database and no id
 
 Each service owns its own database, and no service reaches into another's (ADR-0002). Cross-service consistency comes from snapshotting and idempotent processing rather than from distributed transactions.
 
+**Cart reads Product.** `cart` reads from `product` synchronously over REST. `cart` is the only consumer of `product`. Checkout crystallises everything it reads into an immutable snapshot, so a later product edit never changes a historical order (ADR-0004).
+
 ### Domain language, continued
 
 **The concepts.**
 
 - **Cart**: the container for an intended order. It owns line items, addresses and payment method. It can hold line items from more than one shop.
+- **OrderSku**: the immutable crystallised snapshot of a SKU at the moment an order is created. Nobody can edit it, and it has no status (ADR-0004). `docs/services/order.md` lists its fields.
 
 ## Data conventions
 

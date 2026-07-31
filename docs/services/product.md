@@ -57,7 +57,7 @@ The applied option combination lives in the `sku_options` join table (`sku_id`, 
 Notes:
 
 - The end user cannot edit a SKU.
-- SKUs are dynamic: if the shop removes an attribute option, the SKUs that used it are deleted, not archived. No endpoint removes an option in this build, so the rule is latent.
+- SKUs are dynamic: if the shop removes an attribute option, the SKUs that used it are deleted, not archived. No endpoint removes an option in this build, so the rule is latent, but the boundary already absorbs it. `POST /v1/skus:batchGet` returns the missing ids so `cart` can fail the affected lines, and an accepted order needs nothing from the row because `order_sku` is the crystallised copy (ADR-0004).
 
 ### Label
 
@@ -79,7 +79,7 @@ One tax type, no rates and no logic. Tax is out of scope. Do not model tax table
 
 - `GET /v1/products`: catalogue query and search. The filters are `shop_id`, `label`, `q` and `status`. The results are paginated. The public read returns `active` products only.
 - `GET /v1/products/{id}`: product detail with the attributes, the options and the SKUs.
-- `GET /v1/skus/{id}`: SKU lookup.
+- `GET /v1/skus/{id}` and `POST /v1/skus:batchGet`: the `ResolvedSku` payloads that cart and checkout consume. Each response is self-contained: `sku_code`, `product_id`, `shop_id`, `name`, `description`, `price`, `currency`, `available_quantity`, and the resolved options.
 
 **Product-domain management (this service's own surface):**
 

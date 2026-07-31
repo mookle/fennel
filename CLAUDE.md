@@ -55,6 +55,7 @@ These rules apply to general chat conversation.
 `docs/ARCHITECTURE.md` defines every domain term. Read it before you name anything. These are the distinctions to get right without a lookup:
 
 - **A lowercase name in code format is a service, and the same word capitalised is a domain concept.** `cart` is the service, and Cart is the container it holds. `order` is the service, and Order is the unit of obligation it creates.
+- **OrderSku is a snapshot, not a reference.** It is immutable, and it has no status.
 
 ## Load-bearing invariants
 
@@ -62,6 +63,7 @@ These govern the relationships between components: what each service owns, and w
 
 - **Three deployables**: `product` (Go), `cart` (Elixir), `order` (Elixir). No shared database. `shop_id` and `user_id` are opaque identifiers with no backing service (ADR-0002, ADR-0001).
 - **One database per service.** No service queries another's database (ADR-0002).
+- **Crystallisation**: order data is an immutable copy, never a live reference (ADR-0004).
 - **Synchronous reads go over REST and OpenAPI**, not gRPC (ADR-0003).
 
 ## Version control

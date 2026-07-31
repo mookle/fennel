@@ -11,7 +11,7 @@
 The model keeps two entities, **item and group**, with the group (the Order) as the first-class citizen. The group is per shop, because it ties the process to one shop and one user.
 
 - `Order` (the group): `id` (`order_id`), `user_id`, `shop_id`, `delivery_address` (a snapshot), `status`, `created_at`.
-- `OrderSku` (the item): `order_id`, `sku_id`, `sku_code`, `name`, `description`, `unit_price`, `currency`, `quantity`, `line_shipping_cost`.
+- `OrderSku` (the item): an immutable crystallised snapshot. **Nobody can edit it, and it has no status** (ADR-0004). Fields: `order_id`, `sku_id` (the source reference), `sku_code`, `name`, `description`, `unit_price`, `currency`, `billing_type`, `billing_period`, `quantity`, `line_shipping_cost`.
 
 ## Persistence
 
