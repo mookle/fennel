@@ -71,7 +71,7 @@ These govern the relationships between components: what each service owns, and w
 
 ## Deployment target
 
-Local first on **kind**, which is the default smoke-test environment. **GCP** is the cloud target, with GKE and Artifact Registry. Postgres runs in the cluster for dev, and Cloud SQL is a prod-only upgrade. Destroy the stack when it is idle (ADR-0009).
+Local first on **kind**, which is the default smoke-test environment. **GCP** is the cloud target, with GKE and Artifact Registry. Postgres runs in the cluster for dev, and Cloud SQL is a prod-only upgrade. Destroy the stack when it is idle (ADR-0009). **Terraform** provisions the cloud infrastructure, and **Helm** packages the services, with one chart per deployable (ADR-0010).
 
 ## Version control
 

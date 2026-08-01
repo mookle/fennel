@@ -47,10 +47,41 @@ Each service owns its own database, and no service reaches into another's (ADR-0
 - **Accepted**: a seller fact. It occurs when a shop commits to fulfil an Order. In a marketplace the shop is a third party that can decline, so the two moments are distinct (ADR-0005).
 - **Rejected**: a seller fact. It occurs when a shop does not commit to an Order. The reasons vary, for example repeated declined payment attempts, or an unrealistic custom order. In practice this state is rare. Most shops accept incoming orders automatically.
 
-## Deployment (ADR-0009)
+## Monorepo layout
+
+```
+.
+├── apps/
+│   ├── product/                # Go service (Product domain)
+│   ├── cart/                   # Elixir service
+│   └── order/                  # Elixir service
+├── contracts/                  # source of truth for cross-service wire formats
+│   ├── product.openapi.yaml
+│   └── events.md               # JSON Schemas per event
+├── infra/
+│   ├── terraform/              # cluster and cloud resources, per env
+│   │   ├── modules/
+│   │   └── envs/{dev,prod}/
+│   └── helm/                   # one chart per deployable
+│       ├── product/
+│       ├── cart/
+│       ├── order/
+│       └── rabbitmq/           # or a charted dependency
+└── docs/
+    ├── ARCHITECTURE.md         # this file
+    ├── services/
+    │   ├── product.md
+    │   ├── cart.md
+    │   └── order.md
+    ├── original-spec-notes.md  # historical, ignored during development
+    └── decisions/              # ADRs
+```
+
+## Deployment (ADR-0009, ADR-0010)
 
 - **Local first**: a **kind** cluster is the default smoke-test environment. It runs Postgres and RabbitMQ in the cluster.
-- **GCP** is the cloud target, with GKE for the cluster and Artifact Registry for the images. Destroy the stack when it is idle.
+- **GCP** is the cloud target. **Terraform** provisions GKE (Autopilot, or zonal with spot nodes), Artifact Registry, and the networking. Destroy the stack when it is idle.
+- **Helm** packages each service for the cluster. There is one chart per deployable, plus one for the broker.
 - Each service owns its **own Postgres database**. The databases run in the cluster for dev, and Cloud SQL is a prod-only upgrade. No service reaches another service's database.
 
 ## Data conventions
