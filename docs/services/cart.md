@@ -12,12 +12,25 @@ A cart organises items (potentially from multiple shops), the payment method and
 
 - `Cart`: `id`, `user_id`, `delivery_address` (embedded), `payment_method_ref` (an opaque token), `status`, `created_at`, `updated_at`. A cart is `open`, `submitted` or `abandoned`.
 - `CartItem`: `sku_id`, `shop_id`, `quantity`. These are references only. `cart` fetches the descriptive and price data from `product` for display.
+- `Purchase`: the durable record of what the buyer submitted. `cart` creates it at the gate, and it is immutable after that. Fields: `id` (`purchase_id`), `user_id`, `delivery_address` (a snapshot), `lines` (the submitted snapshot: `sku_id`, `shop_id`, `sku_code`, `name`, `description`, `unit_price`, `currency`, `billing_type`, `billing_period`, `quantity`), `shipping` (per line and total), `submitted_at`.
 
 The model puts `payment_method_ref` on the cart, because selection is intent. Nothing consumes it while payment is out of scope (ADR-0001).
 
+### Purchase is the buyer-facing anchor
+
+The "my order" read view reads the `Purchase` in this service's own database. That is deliberate. The buyer's view never reaches into the database of `order`, so the storage isolation rule holds without a cross-service read path (ADR-0002).
+
+Purchase is also where intent becomes a record. Unlike the cart that produced it, a Purchase is durable and immutable. It is the only durable thing this service owns that outlives a session.
+
+## Events
+
+**Emitted:** `purchase.submitted`, one message per Purchase, consumed by `order`. See `contracts/events.md`.
+
+**Consumed:** none. `cart` learns nothing about the orders its Purchase became. That asymmetry is intentional (ADR-0011). A real UI needs a read path or a push to show the order status.
+
 ## Persistence
 
-`cart` owns its own Postgres database (ADR-0009). No service queries another's database (ADR-0002).
+`cart` owns its own Postgres database (ADR-0009). It holds the cart rows and the `purchases` table. No service queries another's database (ADR-0002).
 
 ## Out of scope
 

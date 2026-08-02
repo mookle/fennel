@@ -55,6 +55,7 @@ These rules apply to general chat conversation.
 `docs/ARCHITECTURE.md` defines every domain term. Read it before you name anything. These are the distinctions to get right without a lookup:
 
 - **A lowercase name in code format is a service, and the same word capitalised is a domain concept.** `cart` is the service, and Cart is the container it holds. `order` is the service, and Order is the unit of obligation it creates.
+- **Purchase is not Order.** A Purchase is the buyer's one submission across many shops, and `cart` owns it. An Order is the per-shop unit of obligation, and `order` owns it. One Purchase becomes one Order per shop.
 - **Placed is not accepted.** Placed is a buyer fact, and accepted is a seller fact. The shop is a third party that can decline, so never collapse the two.
 - **OrderSku is a snapshot, not a reference.** It is immutable, and it has no status.
 
@@ -64,6 +65,8 @@ These govern the relationships between components: what each service owns, and w
 
 - **Three deployables**: `product` (Go), `cart` (Elixir), `order` (Elixir). No shared database. `shop_id` and `user_id` are opaque identifiers with no backing service (ADR-0002, ADR-0001).
 - **One database per service.** No service queries another's database (ADR-0002, ADR-0009).
+- **Each side mints its own identifiers**: `cart` mints `purchase_id`, and `order` mints `order_id`. Neither names the other's resources. Only `purchase_id` crosses the boundary (ADR-0011).
+- **`order` owns the shop split.** Cart never encodes the per-shop rule (ADR-0011).
 - **Stock decrements only on `order.accepted`**, which is the moment a shop commits, not the moment a buyer submits. There is no reservation and no hold. This build accepts the oversell (ADR-0005).
 - **Crystallisation**: order data is an immutable copy, never a live reference (ADR-0004).
 - **Service-to-service auth** is a shared bearer token inside the cluster. There is no mTLS (ADR-0008).

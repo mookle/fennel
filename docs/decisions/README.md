@@ -22,3 +22,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0008](0008-service-auth-bearer-token.md) | Service-to-service auth through a shared bearer token | Accepted |
 | [0009](0009-gcp-cloud-target-kind-locally.md) | Cloud platform: GCP is the cloud target, and kind runs locally | Accepted |
 | [0010](0010-terraform-provisions-helm-packages.md) | Infrastructure as code: Terraform provisions, and Helm packages | Accepted |
+| [0011](0011-one-cart-many-orders.md) | One cart can create many orders | Accepted |

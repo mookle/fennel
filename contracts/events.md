@@ -4,6 +4,7 @@ RabbitMQ carries every event that crosses a boundary in this build (ADR-0006).
 
 | Event | Producer | Consumer | Boundary |
 |---|---|---|---|
+| `purchase.submitted` | `cart` | `order` | one Purchase to many Orders (ADR-0011) |
 | `order.accepted` | `order` | `product` | commitment to stock (ADR-0005) |
 
 `placed` is an order state, not an event. Nothing consumes one, so `order` emits none.
@@ -11,8 +12,8 @@ RabbitMQ carries every event that crosses a boundary in this build (ADR-0006).
 ## Delivery semantics
 
 - **At-least-once.** A producer must not lose an event on crash. Use publisher confirms and durable queues (RabbitMQ quorum queues).
-- **Idempotent consumers.** `product` dedupes `order.accepted` on `order_id`. It persists the processed identifiers and ignores the repeats. The stock decrement must be safe to receive twice.
-- **Ordering** is not required. Each event is self-contained.
+- **Idempotent consumers.** `order` dedupes `purchase.submitted` on `purchase_id`. `product` dedupes `order.accepted` on `order_id`. Both persist the processed identifiers and ignore the repeats. The shop split and the stock decrement must both be safe to receive twice.
+- **Ordering** is not required. Each event is self-contained. `order.accepted` for an order can only follow the `purchase.submitted` that created that order.
 
 ## Shared envelope
 
@@ -21,7 +22,7 @@ Every message shares this envelope. The `type` field selects the payload schema.
 ```json
 {
   "id": "evt_01HZB2",
-  "type": "order.accepted",
+  "type": "purchase.submitted",
   "occurred_at": "2026-07-22T10:20:30Z",
   "version": 1,
   "data": { }
@@ -29,6 +30,91 @@ Every message shares this envelope. The `type` field selects the payload schema.
 ```
 
 ## Payload schemas
+
+### `purchase.submitted`
+
+The buyer's single submission, across one or more shops. `cart` emits **one message per Purchase**, carrying the customer-facing **`purchase_id`** that `cart` mints.
+
+This is a "fat" event. It carries everything `order` needs to create the orders without a question to anyone, including the crystallised line snapshots (ADR-0004), each tagged with its `shop_id`. `order` fans the Purchase out into one Order per shop and mints each `order_id` itself. The event never carries an `order_id` (ADR-0011).
+
+- **Routing key:** `purchase.submitted`
+- **Producer:** `cart`
+- **Consumer:** `order` (shop split, order creation)
+
+The model puts the payment method selection on the cart, but the event does **not** carry it. Nothing consumes it while payment is out of scope (ADR-0001). `payment_method_ref` is where it reattaches.
+
+#### `data` schema
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["purchase_id", "user_id", "delivery_address", "shipping", "lines"],
+  "properties": {
+    "purchase_id":        { "type": "string", "description": "minted by cart. The customer-facing reference, and the dedupe key for the consumer" },
+    "user_id":            { "type": "string" },
+    "delivery_address": {
+      "type": "object",
+      "required": ["line1", "city", "country_id"],
+      "properties": {
+        "name":       { "type": "string" },
+        "line1":      { "type": "string" },
+        "line2":      { "type": "string" },
+        "city":       { "type": "string" },
+        "postcode":   { "type": "string" },
+        "country_id": { "type": "string" },
+        "region_id":  { "type": "string" }
+      }
+    },
+    "shipping": {
+      "type": "object",
+      "required": ["currency", "total", "lines"],
+      "properties": {
+        "currency": { "type": "string" },
+        "total":    { "type": "string" },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["sku_id", "cost"],
+            "properties": {
+              "sku_id": { "type": "string" },
+              "cost":   { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "lines": {
+      "type": "array",
+      "minItems": 1,
+      "description": "all lines across every shop. order groups them by shop_id",
+      "items": {
+        "type": "object",
+        "required": ["sku_id", "shop_id", "sku_code", "name", "unit_price", "currency", "quantity"],
+        "properties": {
+          "sku_id":         { "type": "string" },
+          "shop_id":        { "type": "string", "description": "the shop split key. order creates one Order per distinct value" },
+          "sku_code":       { "type": "string" },
+          "name":           { "type": "string" },
+          "description":    { "type": "string" },
+          "unit_price":     { "type": "string" },
+          "currency":       { "type": "string" },
+          "billing_type":   { "type": "string", "enum": ["immediate", "recurring"] },
+          "billing_period": { "type": "string" },
+          "quantity":       { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  }
+}
+```
+
+#### Consumer behaviour (`order`)
+
+1. Look up `purchase_id` in `processed_events`. If it is present, ack and stop.
+2. Group `lines` by `shop_id`. In one transaction, for each group: mint an `order_id`, then create the `Order` with status `placed`, its `purchase_id`, its `OrderSku` snapshots and its address. Record `purchase_id` in `processed_events` once for the whole message.
+3. Ack.
 
 ### `order.accepted`
 
@@ -46,9 +132,10 @@ Placement is a buyer fact and carries no commitment. Acceptance is a seller fact
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "required": ["order_id", "shop_id", "accepted_at", "lines"],
+  "required": ["order_id", "purchase_id", "shop_id", "accepted_at", "lines"],
   "properties": {
     "order_id":    { "type": "string", "description": "minted by order. The dedupe key for the consumer" },
+    "purchase_id": { "type": "string", "description": "a back-reference to the Purchase in cart. Opaque to product" },
     "shop_id":     { "type": "string" },
     "accepted_at": { "type": "string", "format": "date-time" },
     "lines": {
