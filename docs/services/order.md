@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`order` owns the Order domain. It consumes `purchase.submitted`, splits it into one `Order` per shop, and runs the order state machine as far as acceptance.
+`order` owns the Order domain. It consumes `purchase.submitted`, splits it into one `Order` per shop, and runs the order state machine as far as acceptance. `order` owns **obligation** (ADR-0013).
 
 `user_id` and `shop_id` are opaque identifiers that out-of-scope domains own.
 

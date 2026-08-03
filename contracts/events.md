@@ -4,14 +4,14 @@ RabbitMQ carries every event that crosses a boundary in this build (ADR-0006).
 
 | Event | Producer | Consumer | Boundary |
 |---|---|---|---|
-| `purchase.submitted` | `cart` | `order` | one Purchase to many Orders (ADR-0011) |
+| `purchase.submitted` | `cart` | `order` | intent to obligation (ADR-0013) |
 | `order.accepted` | `order` | `product` | commitment to stock (ADR-0005) |
 
 `placed` is an order state, not an event. Nothing consumes one, so `order` emits none.
 
 ## Delivery semantics
 
-- **At-least-once.** A producer must not lose an event on crash. Use publisher confirms and durable queues (RabbitMQ quorum queues).
+- **At-least-once.** A producer must not lose an event on crash. Use publisher confirms and durable queues (RabbitMQ quorum queues). The checkout procedure gates its success response on the confirm for the `purchase.submitted` publish.
 - **Idempotent consumers.** `order` dedupes `purchase.submitted` on `purchase_id`. `product` dedupes `order.accepted` on `order_id`. Both persist the processed identifiers and ignore the repeats. The shop split and the stock decrement must both be safe to receive twice.
 - **Ordering** is not required. Each event is self-contained. `order.accepted` for an order can only follow the `purchase.submitted` that created that order.
 
@@ -33,12 +33,14 @@ Every message shares this envelope. The `type` field selects the payload schema.
 
 ### `purchase.submitted`
 
-The buyer's single submission, across one or more shops. `cart` emits **one message per Purchase**, carrying the customer-facing **`purchase_id`** that `cart` mints.
+The boundary artefact between intent (Purchase) and obligation (Order). See ADR-0013 and ADR-0011. The checkout procedure in `cart` emits **one message per Purchase**, which is the buyer's single submission across one or more shops. The message carries the customer-facing **`purchase_id`** that `cart` mints.
 
 This is a "fat" event. It carries everything `order` needs to create the orders without a question to anyone, including the crystallised line snapshots (ADR-0004), each tagged with its `shop_id`. `order` fans the Purchase out into one Order per shop and mints each `order_id` itself. The event never carries an `order_id` (ADR-0011).
 
+Submission is producer-agnostic. A future flow, for example a custom build order, may publish the event without a cart.
+
 - **Routing key:** `purchase.submitted`
-- **Producer:** `cart`
+- **Producer:** `cart`, checkout procedure (step 5)
 - **Consumer:** `order` (shop split, order creation)
 
 The model puts the payment method selection on the cart, but the event does **not** carry it. Nothing consumes it while payment is out of scope (ADR-0001). `payment_method_ref` is where it reattaches.

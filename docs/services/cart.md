@@ -2,7 +2,9 @@
 
 ## Purpose
 
-`cart` owns the Cart domain: cart management and the checkout procedure. It is the buyer's side of the system.
+`cart` owns the Cart domain: cart management, the checkout procedure, and the durable `Purchase` that checkout submits. It is the buyer's side of the system.
+
+`cart` owns a buyer's **intent**. It never creates an order, never mints an `order_id`, and never touches money (ADR-0013).
 
 `user_id` and `shop_id` are opaque identifiers that out-of-scope domains own.
 
@@ -29,6 +31,21 @@ The model puts `payment_method_ref` on the cart, because selection is intent. No
 The "my order" read view reads the `Purchase` in this service's own database. That is deliberate. The buyer's view never reaches into the database of `order`, so the storage isolation rule holds without a cross-service read path (ADR-0002).
 
 Purchase is also where intent becomes a record. Unlike the cart that produced it, a Purchase is durable and immutable. It is the only durable thing this service owns that outlives a session.
+
+## Checkout procedure
+
+Checkout is a stateless procedure, not a store. It is the move from intent to obligation, and it **ends at submission**. It does not split the cart into per-shop orders, and it mints no `order_id`. It commits one Purchase and announces it.
+
+1. Validate the cart. Call `POST /v1/skus:batchGet` on `product` to refresh the descriptive and price data, and to confirm that each SKU still exists.
+2. Check the stock before submission. Confirm that `available_quantity >= quantity` for every line. This is a synchronous read with no hold. See the ADR-0005 scaling note on oversell.
+3. Get a shipping quote. Call `POST /v1/shipping/quote`, and group the lines by shop for the call. The returned costs are opaque (ADR-0007), and checkout records them per line. This grouping is for the quote only, not for order creation.
+4. Mint a `purchase_id`. In one transaction, persist the **Purchase** with the crystallised submitted lines, the address and the shipping costs.
+5. Publish one **`purchase.submitted`** event. One message carries the whole Purchase, and each line carries its `shop_id`. Gate the success response on the broker publisher confirm.
+6. Stop the cart process.
+
+The buyer gets "purchase submitted" and the `purchase_id`. The per-shop orders are created asynchronously.
+
+Submission is producer-agnostic by design. A future bespoke or custom-order front end can publish `purchase.submitted` without a cart (ADR-0013).
 
 ## Events
 

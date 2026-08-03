@@ -65,6 +65,7 @@ These govern the relationships between components: what each service owns, and w
 
 - **Three deployables**: `product` (Go), `cart` (Elixir), `order` (Elixir). No shared database. `shop_id` and `user_id` are opaque identifiers with no backing service (ADR-0002, ADR-0001).
 - **One database per service.** No service queries another's database (ADR-0002, ADR-0009).
+- **Cart reaches Order only through RabbitMQ**, on the `purchase.submitted` event (ADR-0013).
 - **Each side mints its own identifiers**: `cart` mints `purchase_id`, and `order` mints `order_id`. Neither names the other's resources. Only `purchase_id` crosses the boundary (ADR-0011).
 - **`order` owns the shop split.** Cart never encodes the per-shop rule (ADR-0011).
 - **Stock decrements only on `order.accepted`**, which is the moment a shop commits, not the moment a buyer submits. There is no reservation and no hold. This build accepts the oversell (ADR-0005).

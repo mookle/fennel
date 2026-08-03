@@ -23,8 +23,8 @@ This section defines each term once, and it is the source of truth for all of th
 **The services.**
 
 - **`product`**: the Go service. It owns the Product domain: products, SKUs, attributes and options, labels, stock, and shipping cost calculation. It straddles what a fuller build splits into Catalogue, Inventory and Pricing. The schema draws only the Catalogue and Inventory line (`sku_stock`). Seller management UIs are out of scope.
-- **`cart`**: the Elixir service that holds the cart, the checkout procedure, and the durable Purchase that checkout submits. It is the only synchronous consumer of `product`.
-- **`order`**: the Elixir service that creates one Order per shop from a Purchase, and runs the order state machine to acceptance. It never reads `product`.
+- **`cart`**: the Elixir service that owns intent. It holds the memory-first cart, the checkout procedure, and the durable Purchase that checkout submits. It is the only synchronous consumer of `product`.
+- **`order`**: the Elixir service that owns obligation. It creates one Order per shop from a Purchase, and runs the order state machine to acceptance. It never reads `product`.
 
 ## Service boundaries
 
@@ -32,7 +32,7 @@ Three services connect. The services share nothing: no common database and no id
 
 Each service owns its own database, and no service reaches into another's (ADR-0002). Cross-service consistency comes from snapshotting and idempotent processing rather than from distributed transactions.
 
-**Cart to Order.** `cart` mints a customer-facing `purchase_id` and publishes one `purchase.submitted` fact to the broker. `order` consumes that fact, splits it into one Order per shop, and mints each `order_id`. From that point `order` owns everything durable. Neither service names the other's resources, and only `purchase_id` crosses (ADR-0011).
+**Cart to Order (intent to obligation).** Checkout ends at submission. It mints a customer-facing `purchase_id` and publishes one `purchase.submitted` fact to the broker. `order` consumes that fact, splits it into one Order per shop, and mints each `order_id`. From that point `order` owns everything durable. Neither service names the other's resources, and only `purchase_id` crosses (ADR-0011).
 
 **Cart reads Product.** `cart` reads from `product` synchronously over REST. `cart` is the only consumer of `product`. Checkout crystallises everything it reads into an immutable snapshot, so a later product edit never changes a historical order (ADR-0004).
 
@@ -41,9 +41,14 @@ Each service owns its own database, and no service reaches into another's (ADR-0
 **The concepts.**
 
 - **Cart**: the container for an intended order. It owns line items, addresses and payment method. It can hold line items from more than one shop.
-- **Purchase**: the buyer's single submitted act, across many shops. `cart` creates it at submission and owns it. It is durable, immutable, and the customer-facing reference that `purchase_id` keys.
+- **Checkout**: the procedure inside `cart` that adds an address and a payment method to a Cart, then submits it. It is a UX process, not a domain. It ends when it mints a `purchase_id` and publishes `purchase.submitted`. It never creates orders.
+- **Purchase**: the buyer's single submitted act, across many shops. `cart` creates it at submission and owns it. It is durable, immutable, and the customer-facing reference that `purchase_id` keys. This is where intent becomes a record.
 - **Order**: the per-shop unit of obligation. `order` creates one Order per shop from a Purchase, mints each `order_id`, and carries `purchase_id` as a back-reference. It then runs the order state machine.
 - **OrderSku**: the immutable crystallised snapshot of a SKU at the moment an order is created. Nobody can edit it, and it has no status (ADR-0004). `docs/services/order.md` lists its fields.
+
+**The events.**
+
+- **`purchase.submitted`**: the boundary event. One message per Purchase, from `cart` to `order`, over RabbitMQ (ADR-0013).
 
 **The facts.**
 
