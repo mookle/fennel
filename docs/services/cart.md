@@ -8,13 +8,21 @@
 
 ## Domain model
 
-A cart organises items (potentially from multiple shops), the payment method and the delivery address. The prices it shows are advisory, because `cart` fetches them live from `product`.
+A cart organises items (potentially from multiple shops), the payment method and the delivery address. The prices it shows are advisory, because `cart` fetches them live from `product`. A price becomes a fact only when the Purchase crystallises it at submission, so a cart holds nothing worth a price lock.
 
 - `Cart`: `id`, `user_id`, `delivery_address` (embedded), `payment_method_ref` (an opaque token), `status`, `created_at`, `updated_at`. A cart is `open`, `submitted` or `abandoned`.
 - `CartItem`: `sku_id`, `shop_id`, `quantity`. These are references only. `cart` fetches the descriptive and price data from `product` for display.
 - `Purchase`: the durable record of what the buyer submitted. `cart` creates it at the gate, and it is immutable after that. Fields: `id` (`purchase_id`), `user_id`, `delivery_address` (a snapshot), `lines` (the submitted snapshot: `sku_id`, `shop_id`, `sku_code`, `name`, `description`, `unit_price`, `currency`, `billing_type`, `billing_period`, `quantity`), `shipping` (per line and total), `submitted_at`.
 
 The model puts `payment_method_ref` on the cart, because selection is intent. Nothing consumes it while payment is out of scope (ADR-0001).
+
+## Memory-first lifecycle (ADR-0012)
+
+- One process holds each active cart (`Registry` plus `DynamicSupervisor`). The state lives in the process.
+- Snapshots flush to Postgres on **checkout**, on **idle timeout** (about 15 minutes) and on **graceful drain**. The drain traps SIGTERM, so a Kubernetes deploy does not lose carts.
+- If a process misses on access, it rehydrates from the last snapshot. A miss with no snapshot mints a fresh cart.
+- A crash between flushes loses the recent edits. This build accepts that.
+- The cart table in the database is a snapshot store, not a source of truth. Nothing downstream may depend on how fresh it is.
 
 ### Purchase is the buyer-facing anchor
 
