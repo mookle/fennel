@@ -26,9 +26,13 @@ This section defines each term once, and it is the source of truth for all of th
 - **`cart`**: the Elixir service that owns intent. It holds the memory-first cart, the checkout procedure, and the durable Purchase that checkout submits. It is the only synchronous consumer of `product`.
 - **`order`**: the Elixir service that owns obligation. It creates one Order per shop from a Purchase, and runs the order state machine to acceptance. It never reads `product`.
 
+The word **fulfilment** is deliberately not a name in this build (ADR-0001). In its precise sense it means pick, pack and ship, which this build does not model. In its loose sense it names a phase, not a domain. Where the Order side needs a collective word, use **obligation** from ADR-0013.
+
 ## Service boundaries
 
 Three services connect. The services share nothing: no common database and no identity service. `shop_id` and `user_id` are opaque identifiers.
+
+`cart` and `order` are **separate Mix projects**, not co-located under the same umbrella app. Each side duplicates the event envelope and the payload structs instead of sharing a library. Each side owns its own view of the wire format, and `contracts/events.md` is the shared truth (ADR-0014).
 
 Each service owns its own database, and no service reaches into another's (ADR-0002). Cross-service consistency comes from snapshotting and idempotent processing rather than from distributed transactions.
 

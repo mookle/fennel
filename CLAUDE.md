@@ -58,12 +58,14 @@ These rules apply to general chat conversation.
 - **Purchase is not Order.** A Purchase is the buyer's one submission across many shops, and `cart` owns it. An Order is the per-shop unit of obligation, and `order` owns it. One Purchase becomes one Order per shop.
 - **Placed is not accepted.** Placed is a buyer fact, and accepted is a seller fact. The shop is a third party that can decline, so never collapse the two.
 - **OrderSku is a snapshot, not a reference.** It is immutable, and it has no status.
+- **"fulfilment" is not a name in this build.** Never use it for a domain, a service or a phase. If the Order side needs a collective word, use "obligation". The word stays available in its precise sense, which is pick, pack and ship, and which this build does not model (ADR-0001).
 
 ## Load-bearing invariants
 
 These govern the relationships between components: what each service owns, and which of them may talk to which. Every one cites the ADR that decided it, and the prime directives above say what it takes to change one.
 
 - **Three deployables**: `product` (Go), `cart` (Elixir), `order` (Elixir). No shared database. `shop_id` and `user_id` are opaque identifiers with no backing service (ADR-0002, ADR-0001).
+- **`cart` and `order` are separate Mix projects, not umbrella apps.** Neither may reference the other's modules. Each side duplicates the event envelope, and no library ever shares it (ADR-0014).
 - **One database per service.** No service queries another's database (ADR-0002, ADR-0009).
 - **Cart reaches Order only through RabbitMQ**, on the `purchase.submitted` event (ADR-0013).
 - **Each side mints its own identifiers**: `cart` mints `purchase_id`, and `order` mints `order_id`. Neither names the other's resources. Only `purchase_id` crosses the boundary (ADR-0011).

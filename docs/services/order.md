@@ -6,6 +6,10 @@
 
 `user_id` and `shop_id` are opaque identifiers that out-of-scope domains own.
 
+## Shape
+
+`order` is a standalone Elixir project and deployable (ADR-0014). It shares no code and no database with `cart`, and only `purchase.submitted` over RabbitMQ crosses between them. This project defines its own event envelope and payload struct, and `contracts/events.md` is the shared truth.
+
 ## Order creation
 
 Consuming `purchase.submitted` is the only path that creates an Order. There is no create endpoint, and nothing else writes the `orders` table.

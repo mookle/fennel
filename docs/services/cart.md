@@ -8,6 +8,10 @@
 
 `user_id` and `shop_id` are opaque identifiers that out-of-scope domains own.
 
+## Shape
+
+`cart` is a standalone Elixir project and deployable (ADR-0014). It shares no code and no database with `order`, and only `purchase.submitted` over RabbitMQ crosses between them. This project defines its own event envelope and payload struct, and `contracts/events.md` is the shared truth.
+
 ## Domain model
 
 A cart organises items (potentially from multiple shops), the payment method and the delivery address. The prices it shows are advisory, because `cart` fetches them live from `product`. A price becomes a fact only when the Purchase crystallises it at submission, so a cart holds nothing worth a price lock.

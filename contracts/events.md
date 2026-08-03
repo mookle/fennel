@@ -19,6 +19,8 @@ RabbitMQ carries every event that crosses a boundary in this build (ADR-0006).
 
 Every message shares this envelope. The `type` field selects the payload schema.
 
+Each service defines the envelope struct on its own, and no library shares it (ADR-0014). Each side owns its own view of the wire format. This document is the shared truth.
+
 ```json
 {
   "id": "evt_01HZB2",
