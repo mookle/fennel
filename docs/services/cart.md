@@ -51,6 +51,14 @@ The buyer gets "purchase submitted" and the `purchase_id`. The per-shop orders a
 
 Submission is producer-agnostic by design. A future bespoke or custom-order front end can publish `purchase.submitted` without a cart (ADR-0013).
 
+## Product API dependency
+
+`cart` is the only synchronous consumer of `product`. It uses the catalogue query, the SKU lookup and batch resolution, and the shipping quote. `contracts/product.openapi.yaml` holds the contract.
+
+The test doubles for these calls come **from the examples in the contract**, not from hand-written payloads (ADR-0015). There is a `Product.Client` behaviour with Mox for the logic tests, plus a thin `Req.Test` layer that proves the real client parses real payloads.
+
+Checkout depends on `product` being available. This build accepts that.
+
 ## Events
 
 **Emitted:** `purchase.submitted`, one message per Purchase, consumed by `order`. See `contracts/events.md`.

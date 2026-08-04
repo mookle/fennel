@@ -72,6 +72,7 @@ These govern the relationships between components: what each service owns, and w
 - **`order` owns the shop split.** Cart never encodes the per-shop rule (ADR-0011).
 - **Stock decrements only on `order.accepted`**, which is the moment a shop commits, not the moment a buyer submits. There is no reservation and no hold. This build accepts the oversell (ADR-0005).
 - **Crystallisation**: order data is an immutable copy, never a live reference (ADR-0004).
+- **The test doubles for the product API come from `contracts/product.openapi.yaml`**, never from a hand-written payload (ADR-0015).
 - **Service-to-service auth** is a shared bearer token inside the cluster. There is no mTLS (ADR-0008).
 - **Synchronous reads go over REST and OpenAPI**, not gRPC. **Asynchronous messages go over RabbitMQ.** Delivery is **at-least-once, with idempotent, deduped consumers** (ADR-0003, ADR-0006).
 

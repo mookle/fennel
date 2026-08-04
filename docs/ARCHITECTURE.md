@@ -95,6 +95,7 @@ Each service owns its own database, and no service reaches into another's (ADR-0
 - **Local first**: a **kind** cluster is the default smoke-test environment. It runs Postgres and RabbitMQ in the cluster.
 - **GCP** is the cloud target. **Terraform** provisions GKE (Autopilot, or zonal with spot nodes), Artifact Registry, and the networking. Destroy the stack when it is idle.
 - **Helm** packages each service for the cluster. There is one chart per deployable, plus one for the broker.
+- CI builds one container image per service. CI also runs contract tests against `contracts/` before it deploys. The tests validate the OpenAPI examples against their own schemas. They check that the handlers in `product` return schema-conforming responses. They also derive the test doubles for `cart` from those examples instead of from hand-written payloads (ADR-0015).
 - Each service owns its **own Postgres database**. The databases run in the cluster for dev, and Cloud SQL is a prod-only upgrade. No service reaches another service's database.
 
 ## Data conventions

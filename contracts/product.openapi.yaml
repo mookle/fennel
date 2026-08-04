@@ -47,6 +47,8 @@ paths:
                   page: { type: integer }
                   page_size: { type: integer }
                   total: { type: integer }
+              examples:
+                default: { $ref: '#/components/examples/ProductPage' }
     post:
       tags: [products]
       summary: Create a product
@@ -75,6 +77,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ProductDetail' }
+              examples:
+                default: { $ref: '#/components/examples/ProductDetailExample' }
         '404': { $ref: '#/components/responses/NotFound' }
     patch:
       tags: [products]
@@ -145,6 +149,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ResolvedSku' }
+              examples:
+                default: { $ref: '#/components/examples/ResolvedSkuSingle' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /skus:batchGet:
@@ -173,6 +179,8 @@ paths:
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/ResolvedSku' } }
                   missing: { type: array, items: { type: string } }
+              examples:
+                default: { $ref: '#/components/examples/SkuBatch' }
 
   /shipping/quote:
     post:
@@ -192,6 +200,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ShippingQuoteResponse' }
+              examples:
+                default: { $ref: '#/components/examples/ShippingQuote' }
         '422':
           description: One or more lines cannot ship to the destination
           content:
@@ -420,6 +430,136 @@ components:
         code: { type: string }
         message: { type: string }
         details: { type: array, items: { type: string } }
+
+  examples:
+    # Canonical payloads for the endpoints `cart` consumes (ADR-0015). These are
+    # the source for cart's test doubles: extract them, do not transcribe them.
+    ProductPage:
+      summary: One page of the catalogue query
+      value:
+        items:
+          - id: "prd_01HZA1"
+            shop_id: "shop_42"
+            name: "A Pretty necklace"
+            description: "Hand-made silver pendant on a fine chain."
+            status: "active"
+            base_price: "24.00"
+            currency: "GBP"
+            billing_type: "immediate"
+            billing_period: null
+            label_slugs: ["jewellery", "silver"]
+            created_at: "2026-05-04T09:12:00Z"
+            updated_at: null
+          - id: "prd_01HZA2"
+            shop_id: "shop_7"
+            name: "Beeswax Wrap Set"
+            description: "Three reusable food wraps."
+            status: "active"
+            base_price: "12.50"
+            currency: "GBP"
+            billing_type: "immediate"
+            billing_period: null
+            label_slugs: ["kitchen"]
+            created_at: "2026-05-06T14:41:10Z"
+            updated_at: "2026-06-01T08:00:00Z"
+        page: 1
+        page_size: 20
+        total: 2
+
+    ProductDetailExample:
+      summary: Product detail with attributes, options and SKUs
+      value:
+        id: "prd_01HZA1"
+        shop_id: "shop_42"
+        name: "A Pretty necklace"
+        description: "Hand-made silver pendant on a fine chain."
+        status: "active"
+        base_price: "24.00"
+        currency: "GBP"
+        billing_type: "immediate"
+        billing_period: null
+        label_slugs: ["jewellery", "silver"]
+        created_at: "2026-05-04T09:12:00Z"
+        updated_at: null
+        attributes:
+          - id: "att_01HZA4"
+            product_id: "prd_01HZA1"
+            name: "Material"
+            options:
+              - id: "opt_01HZA5"
+                name: "Silver"
+              - id: "opt_01HZA6"
+                name: "Gold"
+        skus:
+          - id: "sku_01HZA7"
+            product_id: "prd_01HZA1"
+            code: "APN0MTS"
+            price: "24.00"
+            currency: "GBP"
+            available_quantity: 3
+            option_ids: ["opt_01HZA5"]
+            created_at: "2026-05-04T09:15:00Z"
+            updated_at: null
+
+    ResolvedSkuSingle:
+      summary: A single resolved SKU, as read at checkout
+      value:
+        sku_id: "sku_01HZA7"
+        product_id: "prd_01HZA1"
+        shop_id: "shop_42"
+        sku_code: "APN0MTS"
+        name: "A Pretty necklace"
+        description: "Hand-made silver pendant on a fine chain."
+        price: "24.00"
+        currency: "GBP"
+        billing_type: "immediate"
+        billing_period: null
+        available_quantity: 3
+        options:
+          - attribute: "Material"
+            value: "Silver"
+
+    SkuBatch:
+      summary: Batch resolution with one id that no longer exists
+      value:
+        items:
+          - sku_id: "sku_01HZA7"
+            product_id: "prd_01HZA1"
+            shop_id: "shop_42"
+            sku_code: "APN0MTS"
+            name: "A Pretty necklace"
+            description: "Hand-made silver pendant on a fine chain."
+            price: "24.00"
+            currency: "GBP"
+            billing_type: "immediate"
+            billing_period: null
+            available_quantity: 3
+            options:
+              - attribute: "Material"
+                value: "Silver"
+          - sku_id: "sku_01HZB1"
+            product_id: "prd_01HZA2"
+            shop_id: "shop_7"
+            sku_code: "BWS0"
+            name: "Beeswax Wrap Set"
+            price: "12.50"
+            currency: "GBP"
+            billing_type: "immediate"
+            billing_period: null
+            available_quantity: 0
+            options: []
+        missing: ["sku_01HZB9"]
+
+    ShippingQuote:
+      summary: Per-line and total cost for one shop grouping
+      value:
+        currency: "GBP"
+        lines:
+          - sku_id: "sku_01HZA7"
+            cost: "3.95"
+          - sku_id: "sku_01HZB1"
+            cost: "0.00"
+        total: "3.95"
 
   responses:
     BadRequest:
