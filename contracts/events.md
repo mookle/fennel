@@ -7,7 +7,7 @@ RabbitMQ carries every event that crosses a boundary in this build (ADR-0006).
 | `purchase.submitted` | `cart` | `order` | intent to obligation (ADR-0013) |
 | `order.accepted` | `order` | `product` | commitment to stock (ADR-0005) |
 
-`placed` is an order state, not an event. Nothing consumes one, so `order` emits none.
+`placed` is an order state, not an event. Nothing consumes one, so `order` emits none. A fuller build emits several order lifecycle events, each with more than one consumer, for example comms, analytics and seller dashboards.
 
 ## Delivery semantics
 
@@ -118,13 +118,15 @@ The model puts the payment method selection on the cart, but the event does **no
 
 1. Look up `purchase_id` in `processed_events`. If it is present, ack and stop.
 2. Group `lines` by `shop_id`. In one transaction, for each group: mint an `order_id`, then create the `Order` with status `placed`, its `purchase_id`, its `OrderSku` snapshots and its address. Record `purchase_id` in `processed_events` once for the whole message.
-3. Ack.
+3. Ack, then run the acceptance policy for each new order (ADR-0016).
 
 ### `order.accepted`
 
 The commitment fact: a shop has agreed to fulfil an order. `order` emits **one message per accepted Order**, and `product` consumes it to decrement stock (ADR-0005).
 
-Placement is a buyer fact and carries no commitment. Acceptance is a seller fact and does carry one. Stock moves here, not at placement (ADR-0005).
+Placement is a buyer fact and carries no commitment. Acceptance is a seller fact and does carry one. Stock moves here, not at placement (ADR-0005). In this build the acceptance policy accepts automatically, so the transition follows creation at once. The event name still states the rule that holds when acceptance becomes a real decision.
+
+Acceptance is also the seam where the deferred onward process reattaches. Invoicing, payment and dispatch all hang off it (ADR-0016).
 
 - **Routing key:** `order.accepted`
 - **Producer:** `order`, on the transition from `placed` to `accepted`

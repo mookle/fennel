@@ -4,6 +4,8 @@
 
 `order` owns the Order domain. It consumes `purchase.submitted`, splits it into one `Order` per shop, and runs the order state machine as far as acceptance. `order` owns **obligation** (ADR-0013).
 
+The build ends when a shop accepts an order (ADR-0016). Invoicing, payment, dispatch and completion are future work. They reattach at `order.accepted`.
+
 `user_id` and `shop_id` are opaque identifiers that out-of-scope domains own.
 
 ## Shape
@@ -48,6 +50,20 @@ Implement the machine as an explicit transition module. Validate every transitio
 
 **Placed is a buyer fact. Accepted is a seller fact** (ADR-0005). Placement means the buyer submitted. Acceptance means the shop committed, and in a marketplace the shop is a third party that can decline. The two states stay distinct, which lets the stock decrement mean "on commitment" and not "on submission".
 
+### Acceptance policy
+
+The transition is automatic for now. It lives behind one **acceptance policy** seam, an auto-accept rule that always returns true, instead of inline code at the call site (ADR-0016). A real seller-driven or rules-driven acceptance then replaces one function.
+
+`rejected` is implemented and reachable, even though nothing triggers it yet. A state machine with one path is a queue. The branch is what makes acceptance a decision.
+
+### Deferred
+
+`dispatched`, `completed`, `returned` and `merged` are out of scope for this build (ADR-0016). So are returns and exchanges, changes to order items after placement, and order merging. They extend the machine past `accepted`, and they change nothing below it.
+
+One more status is named here so a fuller build reuses the word, and it stays deferred:
+
+- `superseded`: closes an Order that a corrected reissue replaces (an address change, a discount). It is the mechanism behind change-after-placement, and it needs a link from the closed Order to its replacement, which is the one model change on this list.
+
 ## Events
 
 **Consumed:** `purchase.submitted`, from `cart`. The consumer is idempotent and dedupes on `purchase_id`.
@@ -62,4 +78,4 @@ Implement the machine as an explicit transition module. Validate every transitio
 
 ## Out of scope
 
-Dispatch and delivery tracking, returns and exchanges, order merging, and stock reservation.
+Invoicing, payment, transactions and settlement (ADR-0016). Dispatch and delivery tracking, returns and exchanges, order merging, and stock reservation. The item and group model stays general on purpose, so invoices and subscriptions can attach at `order.accepted` later.

@@ -14,7 +14,10 @@ One domain per deployable, one to one (ADR-0001)
 |---|---|---|---|
 | **Product** | Catalogue lookup and query: products, SKUs, attributes and options, labels, stock, shipping cost calculation. This is the read surface that `cart` uses. Seller management UIs are out of scope. | `product` | Go |
 | **Cart** | Cart management: memory-first cart, line items across shops, address selection, and the checkout procedure that submits a `Purchase`. | `cart` | Elixir |
-| **Order** | Order creation: consume `purchase.submitted`, create Orders, run the order state machine. | `order` | Elixir |
+| **Order** | Order creation and acceptance: consume `purchase.submitted`, split by shop, create Orders, run the order state machine, emit `order.accepted`. | `order` | Elixir |
+
+
+**The build ends at order acceptance** (ADR-0016). Invoicing, payment and settlement are out of scope. A more complete build reattaches them at the `order.accepted` event.
 
 ### Domain language
 
@@ -40,6 +43,9 @@ Each service owns its own database, and no service reaches into another's (ADR-0
 
 **Cart reads Product.** `cart` reads from `product` synchronously over REST. `cart` is the only consumer of `product`. Checkout crystallises everything it reads into an immutable snapshot, so a later product edit never changes a historical order (ADR-0004).
 
+
+**The build ends at order acceptance** (ADR-0016). Invoicing, payment and settlement are out of scope. A more complete build reattaches them at the `order.accepted` event.
+
 ### Domain language, continued
 
 **The concepts.**
@@ -53,12 +59,30 @@ Each service owns its own database, and no service reaches into another's (ADR-0
 **The events.**
 
 - **`purchase.submitted`**: the boundary event. One message per Purchase, from `cart` to `order`, over RabbitMQ (ADR-0013).
+- **`order.accepted`**: the write-back event. `order` emits it when a shop commits, and `product` consumes it to decrement stock. It is also the seam where deferred invoicing and payment reattach (ADR-0005, ADR-0016).
 
 **The facts.**
 
 - **Placed**: a buyer fact, the record that the buyer submitted. `order` sets it on each Order it creates (ADR-0005).
 - **Accepted**: a seller fact. It occurs when a shop commits to fulfil an Order. In a marketplace the shop is a third party that can decline, so the two moments are distinct (ADR-0005).
 - **Rejected**: a seller fact. It occurs when a shop does not commit to an Order. The reasons vary, for example repeated declined payment attempts, or an unrealistic custom order. In practice this state is rare. Most shops accept incoming orders automatically.
+
+**Order writes to Product.** The relationship is asymmetric, and the two Elixir services hold different halves of it (ADR-0014, ADR-0002). `order` writes back to `product` asynchronously and once. On acceptance it emits `order.accepted`. `product` consumes that event and decrements stock (ADR-0005). This is the only write into the product domain, and it is never a direct call. `order` never reads `product`. Everything it needs arrives crystallised on the `purchase.submitted` event.
+
+```
+   ┌──────────┐  purchase.submitted   ┌──────────┐   order.accepted   ┌───────────┐
+   │   cart   │ ────── (broker) ────▶ │  order   │ ─── (broker) ────▶ │  product  │
+   │ (Elixir) │                       │ (Elixir) │                    │   (Go)    │
+   └──────────┘                       └──────────┘                    └───────────┘
+        │                                                                   ▲
+        └──────── sync REST: catalogue, sku lookup, shipping quote ─────────┘
+
+   cart:    memory-first cart, checkout,   order:   shop split, orders,   product: products, skus,
+            durable Purchase                        state machine to               attributes, labels,
+                                                    accepted                       shipping, stock
+```
+
+See `contracts/product.openapi.yaml` for the REST contract and `contracts/events.md` for the asynchronous contracts. The ADRs indexed at `docs/decisions/README.md` record the reason for each choice and the alternatives rejected. The inline `(ADR-NNNN)` tags in this document point to the relevant record.
 
 ## Monorepo layout
 

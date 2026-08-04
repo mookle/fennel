@@ -27,3 +27,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0013](0013-buyer-intent-seller-obligation.md) | Buyer intent ends at purchase; seller obligation begins at order | Accepted |
 | [0014](0014-no-umbrella-app.md) | No umbrella app | Accepted |
 | [0015](0015-contract-derived-test-doubles.md) | Contract-derived test doubles for the product API | Accepted |
+| [0016](0016-build-ends-at-order-accepted.md) | The build ends at `order.accepted` | Accepted |
