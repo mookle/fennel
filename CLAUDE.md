@@ -82,6 +82,7 @@ These govern the relationships between components: what each service owns, and w
 These govern the representation of values: what a column's type is, and what a field looks like on the wire. They bind exactly as hard as the invariants above, and they change the same way. `docs/ARCHITECTURE.md` holds the full set and the reasons. These are the ones where the obvious default is the wrong one:
 
 - **Money** is `NUMERIC(15,4)`, and never a float. JSON carries it as a **string**, never as a number, padded to exactly four decimal places on output. Always pair it with an ISO-4217 `currency`, and never do arithmetic across two currencies (ADR-0017).
+- **`updated_at` is `NOT NULL` and means the last write.** It equals `created_at` on an untouched row, and it is never null on the wire. Never treat it as a flag for whether the row changed, and never use `updated_at != created_at` as that flag. `created_at` marks the insertion. Use `updated_at` only where a row change carries no historical meaning (ADR-0018).
 
 ## Deployment target
 

@@ -67,6 +67,8 @@ Stock lives in a separate, narrow table keyed by `sku_id`. It is not a column on
 
 - `SkuStock`: `sku_id` (primary key, foreign key to `sku`), `available_quantity`, `created_at`, `updated_at`.
 
+`created_at` marks the first stock write for the SKU, and `updated_at` the last (ADR-0018).
+
 The reason is the write profile, not tidiness. SKU rows are cold: every catalogue request reads the code and the price, and nothing rewrites them after creation. Stock is hot: the `order.accepted` consumer writes it on every acceptance. In Postgres an update rewrites the whole row, so on a combined table every decrement leaves a dead copy of the SKU row, and unless the update stays HOT it also touches the row's indexes. `sku_stock` carries no index beyond its primary key, which keeps the decrement HOT-eligible and keeps the vacuum churn off the table the read path depends on.
 
 A read that needs price and quantity together, such as `ResolvedSku`, joins the two tables.

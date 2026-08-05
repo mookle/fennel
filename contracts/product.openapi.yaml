@@ -279,7 +279,7 @@ components:
         billing_period: { type: string, nullable: true, description: an ISO-8601 duration. Present only when billing_type is recurring }
         label_slugs: { type: array, items: { type: string } }
         created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, description: the last write. Equals created_at on an untouched row (ADR-0018) }
     ProductDetail:
       allOf:
         - $ref: '#/components/schemas/Product'
@@ -351,7 +351,7 @@ components:
         available_quantity: { type: integer, minimum: 0 }
         option_ids: { type: array, items: { type: string } }
         created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, description: the last write. Equals created_at on an untouched row (ADR-0018) }
     SkuWrite:
       type: object
       required: [product_id, option_ids, price, available_quantity]
@@ -448,7 +448,9 @@ components:
   examples:
     # Canonical payloads for the endpoints `cart` consumes (ADR-0015). These are
     # the source for cart's test doubles: extract them, do not transcribe them.
-    # Note the deliberate shape: money is a padded decimal string (ADR-0017).
+    # Note the deliberate shapes: money is a padded decimal string (ADR-0017),
+    # and updated_at is always present, equal to created_at until the first
+    # write (ADR-0018).
     ProductPage:
       summary: One page of the catalogue query
       value:
@@ -464,7 +466,7 @@ components:
             billing_period: null
             label_slugs: ["jewellery", "silver"]
             created_at: "2026-05-04T09:12:00Z"
-            updated_at: null
+            updated_at: "2026-05-04T09:12:00Z"
           - id: "prd_01HZA2"
             shop_id: "shop_7"
             name: "Beeswax Wrap Set"
@@ -495,7 +497,7 @@ components:
         billing_period: null
         label_slugs: ["jewellery", "silver"]
         created_at: "2026-05-04T09:12:00Z"
-        updated_at: null
+        updated_at: "2026-05-04T09:12:00Z"
         attributes:
           - id: "att_01HZA4"
             product_id: "prd_01HZA1"
@@ -514,7 +516,7 @@ components:
             available_quantity: 3
             option_ids: ["opt_01HZA5"]
             created_at: "2026-05-04T09:15:00Z"
-            updated_at: null
+            updated_at: "2026-05-04T09:15:00Z"
 
     ResolvedSkuSingle:
       summary: A single resolved SKU, as read at checkout

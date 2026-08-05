@@ -124,9 +124,9 @@ See `contracts/product.openapi.yaml` for the REST contract and `contracts/events
 
 ## Data conventions
 
-These rules bind every schema and every payload in the build, and this section is the source of truth for them. The set predates this build, carried over from the original spec, and ADR-0017 has since decided the first of the load-bearing ones that had no record.
+These rules bind every schema and every payload in the build, and this section is the source of truth for them. The set predates this build, carried over from the original spec, and ADR-0017 and ADR-0018 have since decided two of the load-bearing ones that had no record.
 
 - Text is UTF-8. Prefer correct i18n and sorting over micro-optimisation.
 - Money is `NUMERIC(15,4)`. JSON carries it as a **string** to keep the precision, padded to exactly four decimal places on output. Always pair it with an ISO-4217 `currency`, and never do arithmetic across two currencies. Nothing in this build rounds, because every operand is at scale 4 and every quantity is an integer. ADR-0017 holds the rule for the day that changes.
-- `created_at` marks the insertion. `updated_at` stays NULL until something writes the row, so one column doubles as the flag for whether the row has ever changed.
+- `created_at` marks the insertion. `updated_at` is `NOT NULL` and means the last write, so it equals `created_at` on an untouched row (ADR-0018). It is never a flag for whether the row has changed, and `updated_at != created_at` is not that flag either. Use `updated_at` only where row changes carry no historical meaning.
 - An entity's own field is unqualified, and a field holding another entity's value carries that entity's name. `Order.id` and `Sku.code` are bare, while `OrderSku.order_id`, `OrderSku.sku_code` and every `ResolvedSku` field are qualified, because they reference or copy what another entity owns.

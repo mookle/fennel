@@ -29,3 +29,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0015](0015-contract-derived-test-doubles.md) | Contract-derived test doubles for the product API | Accepted |
 | [0016](0016-build-ends-at-order-accepted.md) | The build ends at `order.accepted` | Accepted |
 | [0017](0017-money-is-fixed-scale-decimal.md) | Money is NUMERIC(15,4), and a fixed-scale decimal string on the wire | Accepted |
+| [0018](0018-updated-at-not-null-equals-created-at.md) | `updated_at` is NOT NULL, and equals `created_at` at INSERT | Accepted |
