@@ -21,6 +21,8 @@ Every message shares this envelope. The `type` field selects the payload schema.
 
 Each service defines the envelope struct on its own, and no library shares it (ADR-0014). Each side owns its own view of the wire format. This document is the shared truth.
 
+Every amount below is a decimal string at scale 4, never a JSON number, and it always sits beside an ISO-4217 `currency` (ADR-0017). A producer pads to exactly four decimal places.
+
 ```json
 {
   "id": "evt_01HZB2",
@@ -74,8 +76,8 @@ The model puts the payment method selection on the cart, but the event does **no
       "type": "object",
       "required": ["currency", "total", "lines"],
       "properties": {
-        "currency": { "type": "string" },
-        "total":    { "type": "string" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "total":    { "type": "string", "description": "decimal string, scale 4" },
         "lines": {
           "type": "array",
           "items": {
@@ -102,8 +104,8 @@ The model puts the payment method selection on the cart, but the event does **no
           "sku_code":       { "type": "string" },
           "name":           { "type": "string" },
           "description":    { "type": "string" },
-          "unit_price":     { "type": "string" },
-          "currency":       { "type": "string" },
+          "unit_price":     { "type": "string", "description": "decimal string, scale 4" },
+          "currency":       { "type": "string", "pattern": "^[A-Z]{3}$" },
           "billing_type":   { "type": "string", "enum": ["immediate", "recurring"] },
           "billing_period": { "type": "string" },
           "quantity":       { "type": "integer", "minimum": 1 }

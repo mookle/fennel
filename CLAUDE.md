@@ -77,6 +77,12 @@ These govern the relationships between components: what each service owns, and w
 - **Service-to-service auth** is a shared bearer token inside the cluster. There is no mTLS (ADR-0008).
 - **Synchronous reads go over REST and OpenAPI**, not gRPC. **Asynchronous messages go over RabbitMQ.** Delivery is **at-least-once, with idempotent, deduped consumers** (ADR-0003, ADR-0006).
 
+## Data conventions
+
+These govern the representation of values: what a column's type is, and what a field looks like on the wire. They bind exactly as hard as the invariants above, and they change the same way. `docs/ARCHITECTURE.md` holds the full set and the reasons. These are the ones where the obvious default is the wrong one:
+
+- **Money** is `NUMERIC(15,4)`, and never a float. JSON carries it as a **string**, never as a number, padded to exactly four decimal places on output. Always pair it with an ISO-4217 `currency`, and never do arithmetic across two currencies (ADR-0017).
+
 ## Deployment target
 
 Local first on **kind**, which is the default smoke-test environment. **GCP** is the cloud target, with GKE and Artifact Registry. Postgres runs in the cluster for dev, and Cloud SQL is a prod-only upgrade. Destroy the stack when it is idle (ADR-0009). **Terraform** provisions the cloud infrastructure, and **Helm** packages the services, with one chart per deployable (ADR-0010).
