@@ -32,7 +32,7 @@ Only `purchase_id` crosses the boundary. Neither service names the other's resou
 The model keeps two entities, **item and group**, with the group (the Order) as the first-class citizen. The group is per shop, because it ties the process to one shop and one user.
 
 - `Order` (the group): `id` (`order_id`), `purchase_id` (a back-reference), `user_id`, `shop_id`, `delivery_address` (a snapshot), `created_at`. It carries no status column.
-- `OrderSku` (the item): an immutable crystallised snapshot. **Nobody can edit it, and it has no status** (ADR-0004). Fields: `order_id`, `sku_id` (the source reference), `sku_code`, `name`, `description`, `unit_price`, `currency`, `billing_type`, `billing_period`, `quantity`, `line_shipping_cost`.
+- `OrderSku` (the item): an immutable crystallised snapshot. **Nobody can edit it, and it has no status** (ADR-0004). Fields: `order_id`, `sku_id` (the source reference), `sku_code`, `name`, `description`, `unit_price`, `currency`, `quantity`, `line_shipping_cost`.
 - `OrderStatusHistory`: `order_id`, `status`, `reason`, `created_at`. The history goes in a separate table because these transitions are facts: acceptance and rejection are seller decisions, and each one carries a `reason` that a marketplace must be able to produce later (ADR-0019). An Order's current status is the latest row here. `order` exposes no read that filters orders by status, so caching status directly on `Order` gains little.
 - `processed_events`: `purchase_id` (primary key), `processed_at`. The consumer's dedupe ledger, and infrastructure rather than domain: the primary key is what makes at-least-once delivery unable to act twice (ADR-0006). Each consuming service keeps its own, and `product` has an equivalent keyed on `order_id`.
 

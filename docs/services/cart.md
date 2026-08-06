@@ -18,7 +18,7 @@ A cart organises items (potentially from multiple shops), the payment method and
 
 - `Cart`: `id`, `user_id`, `delivery_address` (embedded), `payment_method_ref` (an opaque token), `status`, `created_at`, `updated_at`. A cart is `open`, `submitted` or `abandoned`.
 - `CartItem`: `sku_id`, `shop_id`, `quantity`. These are references only. `cart` fetches the descriptive and price data from `product` for display.
-- `Purchase`: the durable record of what the buyer submitted. `cart` creates it at the gate, and it is immutable after that. Fields: `id` (`purchase_id`), `user_id`, `delivery_address` (a snapshot), `lines` (the submitted snapshot: `sku_id`, `shop_id`, `sku_code`, `name`, `description`, `unit_price`, `currency`, `billing_type`, `billing_period`, `quantity`), `shipping` (per line and total), `submitted_at`.
+- `Purchase`: the durable record of what the buyer submitted. `cart` creates it at the gate, and it is immutable after that. Fields: `id` (`purchase_id`), `user_id`, `delivery_address` (a snapshot), `lines` (the submitted snapshot: `sku_id`, `shop_id`, `sku_code`, `name`, `description`, `unit_price`, `currency`, `quantity`), `shipping` (per line and total), `submitted_at`.
 
 The model puts `payment_method_ref` on the cart, because selection is intent. Nothing consumes it while payment is out of scope (ADR-0001).
 

@@ -106,8 +106,6 @@ The model puts the payment method selection on the cart, but the event does **no
           "description":    { "type": "string" },
           "unit_price":     { "type": "string", "description": "decimal string, scale 4" },
           "currency":       { "type": "string", "pattern": "^[A-Z]{3}$" },
-          "billing_type":   { "type": "string", "enum": ["immediate", "recurring"] },
-          "billing_period": { "type": "string" },
           "quantity":       { "type": "integer", "minimum": 1 }
         }
       }

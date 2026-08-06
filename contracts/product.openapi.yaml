@@ -259,10 +259,6 @@ components:
     ProductStatus:
       type: string
       enum: [incomplete, active, hidden, archived, reported, deleted]
-    BillingType:
-      type: string
-      description: The payment flow for the product. Recurring products carry a billing_period.
-      enum: [immediate, recurring]
 
     Product:
       type: object
@@ -275,8 +271,6 @@ components:
         status: { $ref: '#/components/schemas/ProductStatus' }
         base_price: { $ref: '#/components/schemas/Money' }
         currency: { $ref: '#/components/schemas/Currency' }
-        billing_type: { $ref: '#/components/schemas/BillingType' }
-        billing_period: { type: string, nullable: true, description: an ISO-8601 duration. Present only when billing_type is recurring }
         label_slugs: { type: array, items: { type: string } }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time, description: the last write. Equals created_at on an untouched row (ADR-0018) }
@@ -296,8 +290,6 @@ components:
         description: { type: string }
         currency: { $ref: '#/components/schemas/Currency' }
         base_price: { $ref: '#/components/schemas/Money' }
-        billing_type: { $ref: '#/components/schemas/BillingType' }
-        billing_period: { type: string, nullable: true }
         label_slugs: { type: array, items: { type: string } }
     ProductPatch:
       type: object
@@ -306,8 +298,6 @@ components:
         name: { type: string }
         description: { type: string }
         base_price: { $ref: '#/components/schemas/Money' }
-        billing_type: { $ref: '#/components/schemas/BillingType' }
-        billing_period: { type: string, nullable: true }
         status: { $ref: '#/components/schemas/ProductStatus' }
         label_slugs: { type: array, items: { type: string } }
 
@@ -377,8 +367,6 @@ components:
         description: { type: string }
         price: { $ref: '#/components/schemas/Money' }
         currency: { $ref: '#/components/schemas/Currency' }
-        billing_type: { $ref: '#/components/schemas/BillingType' }
-        billing_period: { type: string, nullable: true }
         available_quantity: { type: integer, minimum: 0 }
         options:
           type: array
@@ -462,8 +450,6 @@ components:
             status: "active"
             base_price: "24.0000"
             currency: "GBP"
-            billing_type: "immediate"
-            billing_period: null
             label_slugs: ["jewellery", "silver"]
             created_at: "2026-05-04T09:12:00Z"
             updated_at: "2026-05-04T09:12:00Z"
@@ -474,8 +460,6 @@ components:
             status: "active"
             base_price: "12.5000"
             currency: "GBP"
-            billing_type: "immediate"
-            billing_period: null
             label_slugs: ["kitchen"]
             created_at: "2026-05-06T14:41:10Z"
             updated_at: "2026-06-01T08:00:00Z"
@@ -493,8 +477,6 @@ components:
         status: "active"
         base_price: "24.0000"
         currency: "GBP"
-        billing_type: "immediate"
-        billing_period: null
         label_slugs: ["jewellery", "silver"]
         created_at: "2026-05-04T09:12:00Z"
         updated_at: "2026-05-04T09:12:00Z"
@@ -529,8 +511,6 @@ components:
         description: "Hand-made silver pendant on a fine chain."
         price: "24.0000"
         currency: "GBP"
-        billing_type: "immediate"
-        billing_period: null
         available_quantity: 3
         options:
           - attribute: "Material"
@@ -548,8 +528,6 @@ components:
             description: "Hand-made silver pendant on a fine chain."
             price: "24.0000"
             currency: "GBP"
-            billing_type: "immediate"
-            billing_period: null
             available_quantity: 3
             options:
               - attribute: "Material"
@@ -561,8 +539,6 @@ components:
             name: "Beeswax Wrap Set"
             price: "12.5000"
             currency: "GBP"
-            billing_type: "immediate"
-            billing_period: null
             available_quantity: 0
             options: []
         missing: ["sku_01HZB9"]

@@ -22,9 +22,7 @@ The package layout can mirror the three domains (`internal/catalogue`, `internal
 
 The customer-facing listing. A product lists only when at least one SKU exists; short of that it stays `incomplete`. The sellable units (SKUs) come from combinations of attribute options, and a product with no attributes carries the single empty combination.
 
-Fields: `id`, `shop_id`, `name` (a descriptor, not `title`), `description`, `currency`, `base_price`, `billing_type`, `billing_period`, `created_at`, `updated_at`.
-
-`billing_type` and `billing_period` select the payment flow a flexible marketplace must permit: `immediate` for a one-off purchase, or `recurring` with a period for a subscription.
+Fields: `id`, `shop_id`, `name` (a descriptor, not `title`), `description`, `currency`, `base_price`, `created_at`, `updated_at`.
 
 **Statuses**:
 
