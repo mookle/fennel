@@ -22,7 +22,7 @@ The package layout can mirror the three domains (`internal/catalogue`, `internal
 
 The customer-facing listing. A product lists only when at least one SKU exists; short of that it stays `incomplete`. The sellable units (SKUs) come from combinations of attribute options, and a product with no attributes carries the single empty combination.
 
-Fields: `id`, `shop_id`, `name` (a descriptor, not `title`), `description`, `currency`, `base_price`, `billing_type`, `billing_period`, `status`, `created_at`, `updated_at`.
+Fields: `id`, `shop_id`, `name` (a descriptor, not `title`), `description`, `currency`, `base_price`, `billing_type`, `billing_period`, `created_at`, `updated_at`.
 
 `billing_type` and `billing_period` select the payment flow a flexible marketplace must permit: `immediate` for a one-off purchase, or `recurring` with a period for a subscription.
 
@@ -36,6 +36,18 @@ Fields: `id`, `shop_id`, `name` (a descriptor, not `title`), `description`, `cur
 - `deleted`: permanently delisted by the platform. The shop cannot reverse this.
 
 The public catalogue query returns `active` products only.
+
+### ProductStatusHistory
+
+Every status transition writes one row, in the same transaction as the write it accompanies. `reported` can recur, so the history is the only place the earlier occurrences survive (ADR-0019).
+
+Fields: `product_id`, `status`, `reason`, `created_at`.
+
+The history is what restores a reported product. A return from `reported` needs the status the product held before it, and one column cannot hold a value that recurs.
+
+`reason` is a string, and this build does not fix its format. A fuller build that adds report categories or moderator notes decides the shape then.
+
+This table introduces several performance costs when querying products. Requiring a join means a query must resolve the latest history per product before it can filter, and pagination can no longer cut to a page. It also gives up a partial index on a common query, `(shop_id) WHERE status = 'active'`. One fix would be to cache `status` on the Product row, but until performance has been measured, any fix is premature optimisation.
 
 ### Attribute and AttributeOption
 
@@ -126,7 +138,7 @@ The contract holds nothing else. Deletion, option removal, later stock correctio
 
 ## Persistence
 
-`product` owns its own Postgres database (ADR-0009). The suggested tables mirror the model above: `products`, `attributes`, `attribute_options`, `skus`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`, `shipping_rules`, and `processed_events` for idempotency. No service queries another's database (ADR-0002).
+`product` owns its own Postgres database (ADR-0009). The suggested tables mirror the model above: `products`, `product_status_history`, `attributes`, `attribute_options`, `skus`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`, `shipping_rules`, and `processed_events` for idempotency. No service queries another's database (ADR-0002).
 
 ## Not in scope
 
