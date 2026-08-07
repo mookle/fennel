@@ -56,11 +56,9 @@ Attributes are optional: a product has 0-n attributes, and each attribute has 1-
 
 ### SKU
 
-The sellable, orderable unit. The shop creates each SKU by hand from a chosen combination of attribute options, then sets the available quantity. A SKU carries one option for each attribute the product holds, and one SKU exists per distinct combination. On a product with no attributes the combination is empty, so the product carries at most one SKU.
+The sellable, orderable unit. The shop creates each SKU by hand from a chosen combination of attribute options, then sets the available quantity. A SKU carries one option for each attribute the product holds, and one SKU exists per distinct combination, which a uniqueness constraint over the SKU's sorted option ids enforces (ADR-0023). On a product with no attributes the combination is empty, so the product carries at most one SKU.
 
 Fields: `id`, `product_id`, `code`, `price`, `currency`, `created_at`, `updated_at`.
-
-The server generates `code` from a prefix derived from the product name, a per-shop counter, and the code of each applied option. A product called "T-Shirt" in size large, colour black gets `TS0LBLK`.
 
 The applied option combination lives in the `sku_options` join table (`sku_id`, `option_id`), one row per applied option, and no rows for an option-less SKU. The API presents it as `option_ids`. A join table rather than an id array keeps the foreign keys real, and it answers "which SKUs use this option", which is the question SKU dynamism asks (see the notes below).
 
@@ -101,6 +99,14 @@ Country and region rules are optional, which rules out a clean composite key. `i
 
 When more than one rule matches a destination, the most specific rule wins: a region rule beats a country rule. The quote endpoint is opaque to its callers, so this resolution rule lives entirely in `product`.
 
+## SKU codes
+
+The seller supplies the SKU code: `code` is required on `POST /v1/skus`, and the server never generates or composes one (ADR-0023). A code's value is its stability in the external world, on shipping labels, in inventory software and on listings on other channels, so the seller owns its shape. A shared prefix across a product family costs nothing, because the server never parses a code.
+
+SKU codes are unique per shop. A duplicate returns a 409 naming the existing code. Code uniqueness cannot enforce one SKU per option combination, because a custom code is not a function of the combination; that invariant has its own constraint on the sorted option set (ADR-0023).
+
+While a product has never been live, the seller can change an SKU code. Once the product goes live, every code freezes, and a change means deleting and rebuilding the SKU. Today the `incomplete` status implements "has never been live", because nothing returns a product to `incomplete` (ADR-0023).
+
 ## Tax
 
 One tax type, no rates and no logic. Tax is out of scope. Do not model tax tables.
@@ -120,7 +126,7 @@ One tax type, no rates and no logic. Tax is out of scope. Do not model tax table
 
 - `POST /v1/products` and `PATCH /v1/products/{id}`: create and update a product, including a validated status transition.
 - `POST /v1/products/{id}/attributes`: add an attribute with its options.
-- `POST /v1/skus`: create a SKU from a combination of options, with an initial `available_quantity`.
+- `POST /v1/skus`: create a SKU from a combination of options, with a required `code` and an initial `available_quantity`.
 - `GET /v1/labels` and `POST /v1/labels`: list the canonical labels, and create one with optional aliases.
 
 The contract holds nothing else. Deletion, option removal, later stock corrections and shipping-rule management have no endpoint in this build; seed data writes the `shipping_rules` rows directly.

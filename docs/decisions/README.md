@@ -34,3 +34,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0020](0020-billing-types-removed.md) | Billing types removed: every purchase is immediate | Accepted |
 | [0021](0021-cart-abandonment-is-derived.md) | Cart abandonment is derived, not stored | Superseded by ADR-0022 |
 | [0022](0022-cart-deleted-on-submission.md) | Checkout deletes the cart on submission | Accepted |
+| [0023](0023-sellers-define-sku-codes.md) | Sellers define SKU codes | Accepted |
