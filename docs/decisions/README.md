@@ -23,7 +23,7 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0009](0009-gcp-cloud-target-kind-locally.md) | Cloud platform: GCP is the cloud target, and kind runs locally | Accepted |
 | [0010](0010-terraform-provisions-helm-packages.md) | Infrastructure as code: Terraform provisions, and Helm packages | Accepted |
 | [0011](0011-one-cart-many-orders.md) | One cart can create many orders | Accepted |
-| [0012](0012-cart-memory-first.md) | Cart is memory first | Accepted |
+| [0012](0012-cart-memory-first.md) | Cart is memory first | Accepted (amended by ADR-0022) |
 | [0013](0013-buyer-intent-seller-obligation.md) | Buyer intent ends at purchase; seller obligation begins at order | Accepted |
 | [0014](0014-no-umbrella-app.md) | No umbrella app | Accepted |
 | [0015](0015-contract-derived-test-doubles.md) | Contract-derived test doubles for the product API | Accepted |
@@ -32,4 +32,5 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0018](0018-updated-at-not-null-equals-created-at.md) | `updated_at` is NOT NULL, and equals `created_at` at INSERT | Accepted |
 | [0019](0019-status-history-when-transitions-are-facts.md) | A status lives in a history table when its transitions are facts | Accepted |
 | [0020](0020-billing-types-removed.md) | Billing types removed: every purchase is immediate | Accepted |
-| [0021](0021-cart-abandonment-is-derived.md) | Cart abandonment is derived, not stored | Accepted |
+| [0021](0021-cart-abandonment-is-derived.md) | Cart abandonment is derived, not stored | Superseded by ADR-0022 |
+| [0022](0022-cart-deleted-on-submission.md) | Checkout deletes the cart on submission | Accepted |

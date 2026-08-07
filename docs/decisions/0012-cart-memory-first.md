@@ -1,6 +1,6 @@
 # 0012 - Cart is memory first
 
-Status: Accepted
+Status: Accepted (amended by ADR-0022)
 
 ## Context
 

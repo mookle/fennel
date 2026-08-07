@@ -16,7 +16,7 @@
 
 A cart organises items (potentially from multiple shops), the payment method and the delivery address. The prices it shows are advisory, because `cart` fetches them live from `product`. A price becomes a fact only when the Purchase crystallises it at submission, so a cart holds nothing worth a price lock.
 
-- `Cart`: `id`, `user_id`, `delivery_address` (embedded), `payment_method_ref` (an opaque token), `status`, `created_at`, `updated_at`. The status column stores only `open` or `submitted`, because `abandoned` is derived (ADR-0021).
+- `Cart`: `id`, `user_id`, `delivery_address` (embedded), `payment_method_ref` (an opaque token), `created_at`, `updated_at`. There is no status column. Existence is the status: submission deletes the cart, and abandonment derives from age (ADR-0022).
 - `CartItem`: `sku_id`, `shop_id`, `quantity`. These are references only. `cart` fetches the descriptive and price data from `product` for display.
 - `Purchase`: the durable record of what the buyer submitted. `cart` creates it at the gate, and it is immutable after that. Fields: `id` (`purchase_id`), `user_id`, `delivery_address` (a snapshot), `lines` (the submitted snapshot: `sku_id`, `shop_id`, `sku_code`, `name`, `description`, `unit_price`, `currency`, `quantity`), `shipping` (per line and total), `submitted_at`.
 
@@ -25,15 +25,17 @@ The model puts `payment_method_ref` on the cart, because selection is intent. No
 ## Memory-first lifecycle (ADR-0012)
 
 - One process holds each active cart (`Registry` plus `DynamicSupervisor`). The state lives in the process.
-- Snapshots flush to Postgres on **checkout**, on **idle timeout** (about 15 minutes) and on **graceful drain**. The drain traps SIGTERM, so a Kubernetes deploy does not lose carts.
-- If a process misses on access, it rehydrates from the last snapshot. A miss with no snapshot mints a fresh cart.
+- Snapshots flush to Postgres on **idle timeout** (about 15 minutes) and on **graceful drain**. The drain traps SIGTERM, so a Kubernetes deploy does not lose carts. Submission deletes the row instead of flushing it (ADR-0022).
+- If a process misses on access, it rehydrates from the last snapshot. A miss with no snapshot mints a fresh cart, which is also the path after submission.
 - A crash between flushes loses the recent edits. This build accepts that.
-- A cart is **abandoned** when its `updated_at` is older than 48 hours (configurable). Nothing stores that status. It is derived wherever it is read, and a new write revives the cart because the write resets the age (ADR-0021). Abandoned rows linger until an out-of-band process removes them, which this build defers.
+- A cart is **abandoned** when its `updated_at` is older than 48 hours (configurable). Nothing stores that status. It is derived wherever it is read, and a new write revives the cart because the write resets the age (ADR-0021, ADR-0022). Abandoned rows linger until an out-of-band process removes them, which this build defers.
 - The cart table in the database is a snapshot store, not a source of truth. Nothing downstream may depend on how fresh it is.
 
 ### Purchase is the buyer-facing anchor
 
 The "my order" read view reads the `Purchase` in this service's own database. That is deliberate. The buyer's view never reaches into the database of `order`, so the storage isolation rule holds without a cross-service read path (ADR-0002).
+
+Only one source of truth persists for a buyer's intent, and a retry finds no cart after the transaction commits, so it cannot mint a duplicate Purchase (ADR-0022).
 
 Purchase is also where intent becomes a record. Unlike the cart that produced it, a Purchase is durable and immutable. It is the only durable thing this service owns that outlives a session.
 
@@ -44,7 +46,7 @@ Checkout is a stateless procedure, not a store. It is the move from intent to ob
 1. Validate the cart. Call `POST /v1/skus:batchGet` on `product` to refresh the descriptive and price data, and to confirm that each SKU still exists.
 2. Check the stock before submission. Confirm that `available_quantity >= quantity` for every line. This is a synchronous read with no hold. See the ADR-0005 scaling note on oversell.
 3. Get a shipping quote. Call `POST /v1/shipping/quote`, and group the lines by shop for the call. The returned costs are opaque (ADR-0007), and checkout records them per line. This grouping is for the quote only, not for order creation.
-4. Mint a `purchase_id`. In one transaction, persist the **Purchase** with the crystallised submitted lines, the address and the shipping costs.
+4. Mint a `purchase_id`. In one transaction, persist the **Purchase** with the crystallised submitted lines, the address and the shipping costs, and delete the cart row (ADR-0022).
 5. Publish one **`purchase.submitted`** event. One message carries the whole Purchase, and each line carries its `shop_id`. Gate the success response on the broker publisher confirm.
 6. Stop the cart process.
 

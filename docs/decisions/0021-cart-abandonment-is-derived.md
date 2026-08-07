@@ -1,6 +1,6 @@
 # 0021 - Cart abandonment is derived, not stored
 
-Status: Accepted
+Status: Superseded by ADR-0022
 
 ## Context
 
