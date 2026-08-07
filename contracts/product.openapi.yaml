@@ -69,7 +69,7 @@ paths:
 
   /products/{id}:
     parameters:
-      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
     get:
       tags: [catalogue]
       summary: Get a product with attributes, options and SKUs
@@ -105,7 +105,7 @@ paths:
 
   /products/{id}/attributes:
     parameters:
-      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
     post:
       tags: [products]
       summary: Add an attribute (with options) to a product
@@ -142,7 +142,7 @@ paths:
 
   /skus/{id}:
     parameters:
-      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
     get:
       tags: [catalogue]
       summary: Resolve a SKU
@@ -168,7 +168,7 @@ paths:
               type: object
               required: [sku_ids]
               properties:
-                sku_ids: { type: array, items: { type: string }, minItems: 1 }
+                sku_ids: { type: array, items: { type: string, format: uuid }, minItems: 1 }
       responses:
         '200':
           description: >
@@ -181,7 +181,7 @@ paths:
                 required: [items, missing]
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/ResolvedSku' } }
-                  missing: { type: array, items: { type: string } }
+                  missing: { type: array, items: { type: string, format: uuid } }
               examples:
                 default: { $ref: '#/components/examples/SkuBatch' }
 
@@ -265,7 +265,7 @@ components:
       type: object
       required: [id, shop_id, name, status, currency]
       properties:
-        id: { type: string, example: "prd_01HZA1" }
+        id: { type: string, format: uuid }
         shop_id: { type: string }
         name: { type: string }
         description: { type: string }
@@ -306,15 +306,15 @@ components:
       type: object
       required: [id, product_id, name, options]
       properties:
-        id: { type: string, example: "att_01HZA4" }
-        product_id: { type: string }
+        id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid }
         name: { type: string }
         options: { type: array, items: { $ref: '#/components/schemas/AttributeOption' } }
     AttributeOption:
       type: object
       required: [id, name]
       properties:
-        id: { type: string, example: "opt_01HZA5" }
+        id: { type: string, format: uuid }
         name: { type: string }
     AttributeWrite:
       type: object
@@ -334,22 +334,22 @@ components:
       type: object
       required: [id, product_id, code, price, currency, available_quantity]
       properties:
-        id: { type: string, example: "sku_01HZA7" }
-        product_id: { type: string }
+        id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid }
         code: { type: string, example: "APN0MTS" }
         price: { $ref: '#/components/schemas/Money' }
         currency: { $ref: '#/components/schemas/Currency' }
         available_quantity: { type: integer, minimum: 0 }
-        option_ids: { type: array, items: { type: string } }
+        option_ids: { type: array, items: { type: string, format: uuid } }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time, description: the last write. Equals created_at on an untouched row (ADR-0018) }
     SkuWrite:
       type: object
       required: [product_id, code, option_ids, price, available_quantity]
       properties:
-        product_id: { type: string }
+        product_id: { type: string, format: uuid }
         code: { type: string, description: seller-supplied, unique per shop (ADR-0023) }
-        option_ids: { type: array, items: { type: string }, description: one option per attribute the product holds. Empty for a product with no attributes }
+        option_ids: { type: array, items: { type: string, format: uuid }, description: one option per attribute the product holds. Empty for a product with no attributes }
         price: { $ref: '#/components/schemas/Money' }
         available_quantity: { type: integer, minimum: 0 }
     ResolvedSku:
@@ -361,8 +361,8 @@ components:
         an order line from one payload with no follow-up read (ADR-0004).
       required: [sku_id, product_id, shop_id, sku_code, name, price, currency, available_quantity]
       properties:
-        sku_id: { type: string }
-        product_id: { type: string }
+        sku_id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid }
         shop_id: { type: string }
         sku_code: { type: string }
         name: { type: string, description: product name at time of read }
@@ -395,7 +395,7 @@ components:
             type: object
             required: [sku_id, quantity]
             properties:
-              sku_id: { type: string }
+              sku_id: { type: string, format: uuid }
               quantity: { type: integer, minimum: 1 }
     ShippingQuoteResponse:
       type: object
@@ -408,7 +408,7 @@ components:
             type: object
             required: [sku_id, cost]
             properties:
-              sku_id: { type: string }
+              sku_id: { type: string, format: uuid }
               cost: { $ref: '#/components/schemas/Money' }
         total: { $ref: '#/components/schemas/Money' }
 
@@ -416,7 +416,7 @@ components:
       type: object
       required: [id, name, slug]
       properties:
-        id: { type: string, example: "lbl_01HZA9" }
+        id: { type: string, format: uuid }
         name: { type: string, description: canonical }
         slug: { type: string }
         aliases: { type: array, items: { type: string } }
@@ -445,7 +445,7 @@ components:
       summary: One page of the catalogue query
       value:
         items:
-          - id: "prd_01HZA1"
+          - id: "019df242-3b00-7b38-a574-35b288b2eef2"
             shop_id: "shop_42"
             name: "A Pretty necklace"
             description: "Hand-made silver pendant on a fine chain."
@@ -455,7 +455,7 @@ components:
             label_slugs: ["jewellery", "silver"]
             created_at: "2026-05-04T09:12:00Z"
             updated_at: "2026-05-04T09:12:00Z"
-          - id: "prd_01HZA2"
+          - id: "019dfdbc-4f70-7746-b01b-05c48c3c3156"
             shop_id: "shop_7"
             name: "Beeswax Wrap Set"
             description: "Three reusable food wraps."
@@ -472,7 +472,7 @@ components:
     ProductDetailExample:
       summary: Product detail with attributes, options and SKUs
       value:
-        id: "prd_01HZA1"
+        id: "019df242-3b00-7b38-a574-35b288b2eef2"
         shop_id: "shop_42"
         name: "A Pretty necklace"
         description: "Hand-made silver pendant on a fine chain."
@@ -483,30 +483,30 @@ components:
         created_at: "2026-05-04T09:12:00Z"
         updated_at: "2026-05-04T09:12:00Z"
         attributes:
-          - id: "att_01HZA4"
-            product_id: "prd_01HZA1"
+          - id: "019df242-3b00-7151-ba7e-81e8052d193f"
+            product_id: "019df242-3b00-7b38-a574-35b288b2eef2"
             name: "Material"
             options:
-              - id: "opt_01HZA5"
+              - id: "019df242-3b00-772e-8e16-74fe37e5173e"
                 name: "Silver"
-              - id: "opt_01HZA6"
+              - id: "019df242-3b00-738c-90d1-1d6d3809d595"
                 name: "Gold"
         skus:
-          - id: "sku_01HZA7"
-            product_id: "prd_01HZA1"
+          - id: "019df244-fa20-72b6-a1cf-300ff7354d1d"
+            product_id: "019df242-3b00-7b38-a574-35b288b2eef2"
             code: "APN0MTS"
             price: "24.0000"
             currency: "GBP"
             available_quantity: 3
-            option_ids: ["opt_01HZA5"]
+            option_ids: ["019df242-3b00-772e-8e16-74fe37e5173e"]
             created_at: "2026-05-04T09:15:00Z"
             updated_at: "2026-05-04T09:15:00Z"
 
     ResolvedSkuSingle:
       summary: A single resolved SKU, as read at checkout
       value:
-        sku_id: "sku_01HZA7"
-        product_id: "prd_01HZA1"
+        sku_id: "019df244-fa20-72b6-a1cf-300ff7354d1d"
+        product_id: "019df242-3b00-7b38-a574-35b288b2eef2"
         shop_id: "shop_42"
         sku_code: "APN0MTS"
         name: "A Pretty necklace"
@@ -522,8 +522,8 @@ components:
       summary: Batch resolution with one id that no longer exists
       value:
         items:
-          - sku_id: "sku_01HZA7"
-            product_id: "prd_01HZA1"
+          - sku_id: "019df244-fa20-72b6-a1cf-300ff7354d1d"
+            product_id: "019df242-3b00-7b38-a574-35b288b2eef2"
             shop_id: "shop_42"
             sku_code: "APN0MTS"
             name: "A Pretty necklace"
@@ -534,8 +534,8 @@ components:
             options:
               - attribute: "Material"
                 value: "Silver"
-          - sku_id: "sku_01HZB1"
-            product_id: "prd_01HZA2"
+          - sku_id: "019dfdbc-4f70-7952-bc65-165ee40433e7"
+            product_id: "019dfdbc-4f70-7746-b01b-05c48c3c3156"
             shop_id: "shop_7"
             sku_code: "BWS0"
             name: "Beeswax Wrap Set"
@@ -543,16 +543,16 @@ components:
             currency: "GBP"
             available_quantity: 0
             options: []
-        missing: ["sku_01HZB9"]
+        missing: ["019dfdbc-4f70-75fd-9edf-f8c045786f4a"]
 
     ShippingQuote:
       summary: Per-line and total cost for one shop grouping
       value:
         currency: "GBP"
         lines:
-          - sku_id: "sku_01HZA7"
+          - sku_id: "019df244-fa20-72b6-a1cf-300ff7354d1d"
             cost: "3.9500"
-          - sku_id: "sku_01HZB1"
+          - sku_id: "019dfdbc-4f70-7952-bc65-165ee40433e7"
             cost: "0.0000"
         total: "3.9500"
 

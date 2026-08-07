@@ -23,9 +23,11 @@ Each service defines the envelope struct on its own, and no library shares it (A
 
 Every amount below is a decimal string at scale 4, never a JSON number, and it always sits beside an ISO-4217 `currency` (ADR-0017). A producer pads to exactly four decimal places.
 
+Every id a service mints, including the envelope `id`, is a UUIDv7 carried as a plain lowercase UUID string (ADR-0024). `shop_id` and `user_id` stay opaque strings with no constrained shape.
+
 ```json
 {
-  "id": "evt_01HZB2",
+  "id": "019df244-fa20-7a3b-9f5c-b359929d74e1",
   "type": "purchase.submitted",
   "occurred_at": "2026-07-22T10:20:30Z",
   "version": 1,
@@ -57,7 +59,7 @@ The model puts the payment method selection on the cart, but the event does **no
   "type": "object",
   "required": ["purchase_id", "user_id", "delivery_address", "shipping", "lines"],
   "properties": {
-    "purchase_id":        { "type": "string", "description": "minted by cart. The customer-facing reference, and the dedupe key for the consumer" },
+    "purchase_id":        { "type": "string", "format": "uuid", "description": "minted by cart. The customer-facing reference, and the dedupe key for the consumer" },
     "user_id":            { "type": "string" },
     "delivery_address": {
       "type": "object",
@@ -84,7 +86,7 @@ The model puts the payment method selection on the cart, but the event does **no
             "type": "object",
             "required": ["sku_id", "cost"],
             "properties": {
-              "sku_id": { "type": "string" },
+              "sku_id": { "type": "string", "format": "uuid" },
               "cost":   { "type": "string" }
             }
           }
@@ -99,7 +101,7 @@ The model puts the payment method selection on the cart, but the event does **no
         "type": "object",
         "required": ["sku_id", "shop_id", "sku_code", "name", "unit_price", "currency", "quantity"],
         "properties": {
-          "sku_id":         { "type": "string" },
+          "sku_id":         { "type": "string", "format": "uuid" },
           "shop_id":        { "type": "string", "description": "the shop split key. order creates one Order per distinct value" },
           "sku_code":       { "type": "string" },
           "name":           { "type": "string" },
@@ -140,8 +142,8 @@ Acceptance is also the seam where the deferred onward process reattaches. Invoic
   "type": "object",
   "required": ["order_id", "purchase_id", "shop_id", "accepted_at", "lines"],
   "properties": {
-    "order_id":    { "type": "string", "description": "minted by order. The dedupe key for the consumer" },
-    "purchase_id": { "type": "string", "description": "a back-reference to the Purchase in cart. Opaque to product" },
+    "order_id":    { "type": "string", "format": "uuid", "description": "minted by order. The dedupe key for the consumer" },
+    "purchase_id": { "type": "string", "format": "uuid", "description": "a back-reference to the Purchase in cart. Opaque to product" },
     "shop_id":     { "type": "string" },
     "accepted_at": { "type": "string", "format": "date-time" },
     "lines": {
@@ -152,7 +154,7 @@ Acceptance is also the seam where the deferred onward process reattaches. Invoic
         "type": "object",
         "required": ["sku_id", "quantity"],
         "properties": {
-          "sku_id":   { "type": "string" },
+          "sku_id":   { "type": "string", "format": "uuid" },
           "quantity": { "type": "integer", "minimum": 1 }
         }
       }

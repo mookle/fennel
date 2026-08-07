@@ -142,7 +142,7 @@ The contract holds nothing else. Deletion, option removal, later stock correctio
 
 ## Persistence
 
-`product` owns its own Postgres database (ADR-0009). The suggested tables mirror the model above: `products`, `product_status_history`, `attributes`, `attribute_options`, `skus`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`, `shipping_rules`, and `processed_events` for idempotency. No service queries another's database (ADR-0002).
+`product` owns its own Postgres database (ADR-0009). The suggested tables mirror the model above: `products`, `product_status_history`, `attributes`, `attribute_options`, `skus`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`, `shipping_rules`, and `processed_events` for idempotency. Every entity id is a UUIDv7 that the service mints, on a `uuid` column with a `DEFAULT uuidv7()` for the seed data that writes `shipping_rules` directly (ADR-0024). No service queries another's database (ADR-0002).
 
 ## Not in scope
 

@@ -84,7 +84,7 @@ These govern the representation of values: what a column's type is, and what a f
 - **Money** is `NUMERIC(15,4)`, and never a float. JSON carries it as a **string**, never as a number, padded to exactly four decimal places on output. Always pair it with an ISO-4217 `currency`, and never do arithmetic across two currencies (ADR-0017).
 - **`updated_at` is `NOT NULL` and means the last write.** It equals `created_at` on an untouched row, and it is never null on the wire. Never treat it as a flag for whether the row changed, and never use `updated_at != created_at` as that flag. `created_at` marks the insertion. Use `updated_at` only where a row change carries no historical meaning (ADR-0018).
 - **A status lives in a history table when its transitions are facts**, meaning a transition carries a reason, an actor, a time the row's own timestamps do not hold, or a value that can recur. Otherwise the status is a column on the entity row. The shape of the state graph is not the test (ADR-0019).
-- **A SKU code is a business code the seller owns, not an identifier** (ADR-0023).
+- **Every entity id is a UUIDv7**, and the owning service mints it in application code. The column keeps a `DEFAULT uuidv7()` for seed data and direct SQL, and application code never relies on it. JSON carries it as a plain lowercase UUID string. Join and bookkeeping tables keep their natural keys, and `shop_id` and `user_id` stay opaque strings with no constrained shape (ADR-0024). A SKU code is a business code, not an identifier (ADR-0023).
 
 ## Deployment target
 
