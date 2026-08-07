@@ -32,3 +32,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0018](0018-updated-at-not-null-equals-created-at.md) | `updated_at` is NOT NULL, and equals `created_at` at INSERT | Accepted |
 | [0019](0019-status-history-when-transitions-are-facts.md) | A status lives in a history table when its transitions are facts | Accepted |
 | [0020](0020-billing-types-removed.md) | Billing types removed: every purchase is immediate | Accepted |
+| [0021](0021-cart-abandonment-is-derived.md) | Cart abandonment is derived, not stored | Accepted |
