@@ -36,3 +36,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0022](0022-cart-deleted-on-submission.md) | Checkout deletes the cart on submission | Accepted |
 | [0023](0023-sellers-define-sku-codes.md) | Sellers define SKU codes | Accepted |
 | [0024](0024-entity-ids-uuidv7.md) | Entity ids are UUIDv7, minted by the owning service | Accepted |
+| [0025](0025-persistence-layer-maintains-updated-at.md) | The persistence layer maintains `updated_at` | Accepted |
