@@ -18,5 +18,5 @@ The journey from cart to order covers standard REST API fetching and state manag
 
 - The surface area is small and clear, and it is fast to stand up.
 - The platform is not expected to run end to end.
-- All other domains (e.g. user, shop, image, invoicing, payment) are out of scope. Where a flow needs an enitity from one of these other domains, it will use an opaque identifier. 
+- All other domains (e.g. user, shop, image, invoicing, payment) are out of scope. Where a flow needs an entity from one of these other domains, it will use an opaque identifier. 
 - "fulfilment" is not a name in this build. In its precise sense it means pick, pack and ship, which this build does not model. In its loose sense it names a phase, and a phase groups by when work happens rather than by what a service owns, which makes it a poor boundary and an invitation to orchestration.

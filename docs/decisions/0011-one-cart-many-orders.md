@@ -8,7 +8,7 @@ A cart can contain products from multiple shops. A buyer submits once during che
 
 A Purchase is the buyer's view of the transaction. It captures the cart as submitted and may contain items from multiple sellers. `cart` owns Purchases, which are the terminal artifact of checkout and represent the buyer's intent.
 
-An Order is the seller's view of the transaction. `order` owns Orders, creating one per seller so each can independantly reject or accept and fulfil the sale.
+An Order is the seller's view of the transaction. `order` owns Orders, creating one per seller so each can independently reject or accept and fulfil the sale.
 
 Identity follows the same line. One "order" concept and one `order_id` conflates the buyer's single act with the per-shop unit, so each side needs an identifier of its own. The alternative is that `cart` pre-allocates each `order_id`, or that checkout emits one message per shop. Both make `cart` mint identity for a resource `order` owns, and both put the per-shop rule on the buyer's side of the boundary.
 

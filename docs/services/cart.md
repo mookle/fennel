@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`cart` owns the Cart domain: cart management, the checkout procedure, and the durable `Purchase` that checkout submits. It is the buyer's side of the system.
+`cart` owns the Cart domain: cart management, the checkout procedure, and the durable `Purchase` that checkout submits. It is the buyer's side of the system. It is also the only synchronous consumer of the `product` service (ADR-0002).
 
 `cart` owns a buyer's **intent**. It never creates an order, never mints an `order_id`, and never touches money (ADR-0013).
 
@@ -10,7 +10,7 @@
 
 ## Shape
 
-`cart` is a standalone Elixir project and deployable (ADR-0014). It shares no code and no database with `order`, and only `purchase.submitted` over RabbitMQ crosses between them. This project defines its own event envelope and payload struct, and `contracts/events.md` is the shared truth.
+`cart` is a standalone Elixir project and deployable (ADR-0014). It shares no code and no database with `order`, and only `purchase.submitted` over RabbitMQ crosses between them. This project defines its own event envelope and payload struct with `contracts/events.md` as the shared truth.
 
 ## Domain model
 
@@ -20,24 +20,22 @@ A cart organises items (potentially from multiple shops), the payment method and
 - `CartItem`: `sku_id`, `shop_id`, `quantity`. These are references only. `cart` fetches the descriptive and price data from `product` for display.
 - `Purchase`: the durable record of what the buyer submitted. `cart` creates it at the gate, and it is immutable after that. Fields: `id` (`purchase_id`), `user_id`, `delivery_address` (a snapshot), `lines` (the submitted snapshot: `sku_id`, `shop_id`, `sku_code`, `name`, `description`, `unit_price`, `currency`, `quantity`), `shipping` (per line and total), `submitted_at`.
 
-The model puts `payment_method_ref` on the cart, because selection is intent. Nothing consumes it while payment is out of scope (ADR-0001).
+The model puts `payment_method_ref` on the cart, because selection is intent. Nothing consumes it while payment is out of scope, so it does not cross the boundary on the event (ADR-0001).
+
+### Purchase is the buyer-facing anchor
+
+The "my order" read view reads the `Purchase` in this service's own database. That is deliberate. The buyer's view never reaches into the database of `order`, so the storage isolation rule holds without a cross-service read path (ADR-0002).
+
+Purchase is also where intent becomes a record. Unlike the cart that produced it, a Purchase is durable and immutable. It is the only durable thing this service owns that outlives a session.
 
 ## Memory-first lifecycle (ADR-0012)
 
 - One process holds each active cart (`Registry` plus `DynamicSupervisor`). The state lives in the process.
 - Snapshots flush to Postgres on **idle timeout** (about 15 minutes) and on **graceful drain**. The drain traps SIGTERM, so a Kubernetes deploy does not lose carts. Submission deletes the row instead of flushing it (ADR-0022).
 - If a process misses on access, it rehydrates from the last snapshot. A miss with no snapshot mints a fresh cart, which is also the path after submission.
-- A crash between flushes loses the recent edits. This build accepts that.
 - A cart is **abandoned** when its `updated_at` is older than 48 hours (configurable). Nothing stores that status. It is derived wherever it is read, and a new write revives the cart because the write resets the age (ADR-0021, ADR-0022). Abandoned rows linger until an out-of-band process removes them, which this build defers.
+- A crash between flushes loses the recent edits. This build accepts that.
 - The cart table in the database is a snapshot store, not a source of truth. Nothing downstream may depend on how fresh it is.
-
-### Purchase is the buyer-facing anchor
-
-The "my order" read view reads the `Purchase` in this service's own database. That is deliberate. The buyer's view never reaches into the database of `order`, so the storage isolation rule holds without a cross-service read path (ADR-0002).
-
-Only one source of truth persists for a buyer's intent, and a retry finds no cart after the transaction commits, so it cannot mint a duplicate Purchase (ADR-0022).
-
-Purchase is also where intent becomes a record. Unlike the cart that produced it, a Purchase is durable and immutable. It is the only durable thing this service owns that outlives a session.
 
 ## Checkout procedure
 
@@ -50,7 +48,7 @@ Checkout is a stateless procedure, not a store. It is the move from intent to ob
 5. Publish one **`purchase.submitted`** event. One message carries the whole Purchase, and each line carries its `shop_id`. Gate the success response on the broker publisher confirm.
 6. Stop the cart process.
 
-The buyer gets "purchase submitted" and the `purchase_id`. The per-shop orders are created asynchronously.
+The buyer gets "purchase submitted" and the `purchase_id`. The per-shop orders are created and accepted asynchronously.
 
 Submission is producer-agnostic by design. A future bespoke or custom-order front end can publish `purchase.submitted` without a cart (ADR-0013).
 
@@ -70,7 +68,7 @@ Checkout depends on `product` being available. This build accepts that.
 
 ## Persistence
 
-`cart` owns its own Postgres database (ADR-0009). It holds the cart rows and the `purchases` table. No service queries another's database (ADR-0002).
+`cart` owns its own Postgres database (ADR-0009). It holds the cart snapshots and the `purchases` table. No service queries another's database.
 
 ## Out of scope
 

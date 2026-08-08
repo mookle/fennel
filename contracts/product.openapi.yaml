@@ -358,7 +358,7 @@ components:
         A denormalised read model, not the SKU row: the SKU joined with its
         product's name, description and shop_id, the resolved option names,
         and the stock. It is self-contained so that checkout can crystallise
-        an order line from one payload with no follow-up read (ADR-0004).
+        a Purchase line from one payload with no follow-up read (ADR-0004).
       required: [sku_id, product_id, shop_id, sku_code, name, price, currency, available_quantity]
       properties:
         sku_id: { type: string, format: uuid }

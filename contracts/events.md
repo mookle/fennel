@@ -1,6 +1,6 @@
 # Async event contracts
 
-RabbitMQ carries every event that crosses a boundary in this build (ADR-0006).
+Two events cross a boundary in this build. RabbitMQ carries both (ADR-0006).
 
 | Event | Producer | Consumer | Boundary |
 |---|---|---|---|
@@ -19,12 +19,6 @@ RabbitMQ carries every event that crosses a boundary in this build (ADR-0006).
 
 Every message shares this envelope. The `type` field selects the payload schema.
 
-Each service defines the envelope struct on its own, and no library shares it (ADR-0014). Each side owns its own view of the wire format. This document is the shared truth.
-
-Every amount below is a decimal string at scale 4, never a JSON number, and it always sits beside an ISO-4217 `currency` (ADR-0017). A producer pads to exactly four decimal places.
-
-Every id a service mints, including the envelope `id`, is a UUIDv7 carried as a plain lowercase UUID string (ADR-0024). `shop_id` and `user_id` stay opaque strings with no constrained shape.
-
 ```json
 {
   "id": "019df244-fa20-7a3b-9f5c-b359929d74e1",
@@ -35,13 +29,19 @@ Every id a service mints, including the envelope `id`, is a UUIDv7 carried as a 
 }
 ```
 
+Each service defines the envelope struct on its own, and no library shares it (ADR-0014). Each side owns its own view of the wire format. This document is the shared truth.
+
+Every amount below is a decimal string at scale 4, never a JSON number, and it always sits beside an ISO-4217 `currency` (ADR-0017). A producer pads to exactly four decimal places.
+
+Every id a service mints, including the envelope `id`, is a UUIDv7 carried as a plain lowercase UUID string (ADR-0024). `shop_id` and `user_id` stay opaque strings with no constrained shape.
+
 ## Payload schemas
 
 ### `purchase.submitted`
 
 The boundary artefact between intent (Purchase) and obligation (Order). See ADR-0013 and ADR-0011. The checkout procedure in `cart` emits **one message per Purchase**, which is the buyer's single submission across one or more shops. The message carries the customer-facing **`purchase_id`** that `cart` mints.
 
-This is a "fat" event. It carries everything `order` needs to create the orders without a question to anyone, including the crystallised line snapshots (ADR-0004), each tagged with its `shop_id`. `order` fans the Purchase out into one Order per shop and mints each `order_id` itself. The event never carries an `order_id` (ADR-0011).
+This is a "fat" event. It carries everything `order` needs to create the orders without a question to anyone, including the crystallised line snapshots (ADR-0004), each tagged with its `shop_id`. `order` fans the Purchase out into one Order per shop and mints each `order_id` itself. The event never carries an `order_id`.
 
 Submission is producer-agnostic. A future flow, for example a custom build order, may publish the event without a cart.
 
@@ -172,3 +172,4 @@ The payload carries only what the consumer needs. `product` decrements stock. It
 3. Ack.
 
 The decrement is unconditional. There is no reservation and no hold, so stock can go negative when two checkouts compete for the last unit. This build accepts the oversell (ADR-0005).
+

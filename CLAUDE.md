@@ -58,6 +58,7 @@ These rules apply to general chat conversation.
 - **Purchase is not Order.** A Purchase is the buyer's one submission across many shops, and `cart` owns it. An Order is the per-shop unit of obligation, and `order` owns it. One Purchase becomes one Order per shop.
 - **Placed is not accepted.** Placed is a buyer fact, and accepted is a seller fact. The shop is a third party that can decline, so never collapse the two.
 - **OrderSku is a snapshot, not a reference.** It is immutable, and it has no status.
+- **An entity's own field is unqualified, and a field holding another entity's value carries that entity's name.** `Sku.code` is bare, and `ResolvedSku.sku_code`, `OrderSku.sku_code` and the `purchase.submitted` line's `sku_code` are qualified because they copy it. The two spellings are not a drift to tidy up.
 - **"fulfilment" is not a name in this build.** Never use it for a domain, a service or a phase. If the Order side needs a collective word, use "obligation". The word stays available in its precise sense, which is pick, pack and ship, and which this build does not model (ADR-0001).
 
 ## Load-bearing invariants
@@ -70,12 +71,13 @@ These govern the relationships between components: what each service owns, and w
 - **Cart reaches Order only through RabbitMQ**, on the `purchase.submitted` event (ADR-0013).
 - **Each side mints its own identifiers**: `cart` mints `purchase_id`, and `order` mints `order_id`. Neither names the other's resources. Only `purchase_id` crosses the boundary (ADR-0011).
 - **`order` owns the shop split.** Cart never encodes the per-shop rule (ADR-0011).
+- **`order` never reads `product`.** Everything it needs arrives crystallised on the event. `cart` is the only synchronous consumer of `product` (ADR-0004, ADR-0002).
+- **Crystallisation**: order data is an immutable copy, never a live reference (ADR-0004).
 - **The build ends at `accepted`.** There is no invoicing, no payment and no settlement. All three reattach at `order.accepted` (ADR-0016).
 - **Stock decrements only on `order.accepted`**, which is the moment a shop commits, not the moment a buyer submits. There is no reservation and no hold. This build accepts the oversell (ADR-0005).
-- **Crystallisation**: order data is an immutable copy, never a live reference (ADR-0004).
 - **The test doubles for the product API come from `contracts/product.openapi.yaml`**, never from a hand-written payload (ADR-0015).
-- **Service-to-service auth** is a shared bearer token inside the cluster. There is no mTLS (ADR-0008).
 - **Synchronous reads go over REST and OpenAPI**, not gRPC. **Asynchronous messages go over RabbitMQ.** Delivery is **at-least-once, with idempotent, deduped consumers** (ADR-0003, ADR-0006).
+- **Service-to-service auth** is a shared bearer token inside the cluster. There is no mTLS (ADR-0008).
 
 ## Data conventions
 

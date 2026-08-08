@@ -14,6 +14,8 @@
 - **Inventory**: stock levels. Write-heavy data - written by an event consumer, potentially contended, and the only thing another service can mutate.
 - **Pricing**: `base_price` on the product and `price` on the SKU. Both are static here, whereas a real Pricing domain grows promotions, campaigns, price history and currency conversion, none of which are in scope.
 
+The schema draws only the Catalogue and Inventory line, because that line pays off today (see Persistence). Pricing stays a column; to split a table for a domain that does not exist yet is speculative. Keep the price logic behind one function that answers "what does this SKU cost", so it has somewhere to grow.
+
 The package layout can mirror the three domains (`internal/catalogue`, `internal/inventory`, `internal/pricing`). Keep the types concrete, and declare each interface at the point of use. Ports and adapters between three packages in one binary is ceremony this build does not need.
 
 ## Domain model
@@ -90,7 +92,7 @@ Stock lives in a separate, narrow table keyed by `sku_id`. It is not a column on
 
 The reason is the write profile, not tidiness. SKU rows are cold: every catalogue request reads the code and the price, and nothing rewrites them after creation. Stock is hot: the `order.accepted` consumer writes it on every acceptance. In Postgres an update rewrites the whole row, so on a combined table every decrement leaves a dead copy of the SKU row, and unless the update stays HOT it also touches the row's indexes. `sku_stock` carries no index beyond its primary key, which keeps the decrement HOT-eligible and keeps the vacuum churn off the table the read path depends on.
 
-A read that needs price and quantity together, such as `ResolvedSku`, joins the two tables.
+The `order.accepted` consumer writes the decrement and its `processed_events` row in one transaction. A read that needs price and quantity together, such as `ResolvedSku`, joins the two tables.
 
 ### Label
 
@@ -153,7 +155,9 @@ The contract holds nothing else. Deletion, option removal, later stock correctio
 
 ## Persistence
 
-`product` owns its own Postgres database (ADR-0009). The suggested tables mirror the model above: `products`, `product_status_history`, `attributes`, `attribute_options`, `skus`, `sku_codes`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`, `shipping_rules`, and `processed_events` for idempotency. Every entity id is a UUIDv7 that the service mints, on a `uuid` column with a `DEFAULT uuidv7()` for the seed data that writes `shipping_rules` directly (ADR-0024). No service queries another's database (ADR-0002).
+`product` owns its own Postgres database. The suggested tables mirror the model above: `products`, `product_status_history`, `attributes`, `attribute_options`, `skus`, `sku_codes`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`, `shipping_rules`, and `processed_events` for idempotency. Every entity id is a UUIDv7 that the service mints, on a `uuid` column with a `DEFAULT uuidv7()` for the seed data that writes `shipping_rules` directly (ADR-0024).
+
+`sku_stock` is separate from `skus` on purpose. See SkuStock above for the reason.
 
 ## Not in scope
 
