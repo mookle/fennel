@@ -40,3 +40,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0026](0026-sku-code-is-an-allocation.md) | A SKU code is an allocation, not a column | Accepted |
 | [0027](0027-base-price-is-derived.md) | `base_price` is derived from SKU prices | Accepted |
 | [0028](0028-currency-lives-on-the-product.md) | Currency lives on the product, not the SKU | Accepted |
+| [0029](0029-product-currency-stands-in-for-shop.md) | The product's currency stands in for the shop's | Accepted |
