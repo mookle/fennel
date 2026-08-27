@@ -22,7 +22,9 @@ These rules apply to documentation, VCS-related text, error messages, release no
 - Use one name for one thing. Do not refer to the same item by two different names.
 - Give each word one meaning. "fall" means to move down, not to decrease.
 - No marketing adjectives: seamless, robust, powerful, cutting-edge, effortless, world-class, next-generation, revolutionary.
-- Use British English spelling. "colour" not "color", "fulfilment" not "fulfillment")
+- Use British English spelling. "colour" not "color", "fulfilment" not "fulfillment").
+- Use "an SKU" not "a SKU".
+- Don't use "mint" where "create" or "generate" has the same meaning.
 
 ### Verbs
 
@@ -33,12 +35,12 @@ These rules apply to documentation, VCS-related text, error messages, release no
 
 ### Punctuation
 
-- No em dashes.
+- No em dashes or en dashes. A spaced hyphen used as a dash is fine; this rule is about the glyph, not the construct.
 
 ### Structure
 
 - One topic per paragraph, max six sentences. For steps, use a numbered vertical list, one action per item, imperative form. Put a condition before its command.
-- Do not hard-wrap prose.
+- Do not hard-wrap prose. This does not apply to code comments.
 - Avoid run-on sentences where possible.
 
 ## Conversation
