@@ -12,7 +12,7 @@
 
 - **Catalogue**: products, SKUs, attributes, options, labels. The bulk of the model. Read-heavy data - written by sellers, read constantly by all.
 - **Inventory**: stock levels. Write-heavy data - written by an event consumer, potentially contended, and the only thing another service can mutate.
-- **Pricing**: `base_price` on the product and `price` on the SKU. Both are static here, whereas a real Pricing domain grows promotions, campaigns, price history and currency conversion, none of which are in scope.
+- **Pricing**: `price` on the SKU, which the seller sets, and `base_price` on the product, which is the lowest of them (ADR-0027). Both are static here, whereas a real Pricing domain grows promotions, campaigns, price history and currency conversion, none of which are in scope.
 
 The schema draws only the Catalogue and Inventory line, because that line pays off today (see Persistence). Pricing stays a column; to split a table for a domain that does not exist yet is speculative. Keep the price logic behind one function that answers "what does this SKU cost", so it has somewhere to grow.
 
@@ -24,7 +24,7 @@ The package layout can mirror the three domains (`internal/catalogue`, `internal
 
 The customer-facing listing. A product lists only when at least one SKU exists; short of that it stays `incomplete`. The sellable units (SKUs) come from combinations of attribute options, and a product with no attributes carries the single empty combination.
 
-Fields: `id`, `shop_id`, `name` (a descriptor, not `title`), `description`, `currency`, `base_price`, `created_at`, `updated_at`.
+Fields: `id`, `shop_id`, `name` (a descriptor, not `title`), `description`, `currency`, `base_price`, `created_at`, `updated_at`. `base_price` is the lowest price among the product's SKUs, which the persistence layer maintains on every SKU write and the API presents as read-only. It is null while the product has no SKUs, a state which satisfies the `incomplete` status (ADR-0027).
 
 **Statuses**:
 
@@ -158,6 +158,8 @@ The contract holds nothing else. Deletion, option removal, later stock correctio
 `product` owns its own Postgres database. The suggested tables mirror the model above: `products`, `product_status_history`, `attributes`, `attribute_options`, `skus`, `sku_codes`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`, `shipping_rules`, and `processed_events` for idempotency. Every entity id is a UUIDv7 that the service mints, on a `uuid` column with a `DEFAULT uuidv7()` for the seed data that writes `shipping_rules` directly (ADR-0024).
 
 `sku_stock` is separate from `skus` on purpose. See SkuStock above for the reason.
+
+`base_price` is updated whenever an SKU is inserted, updated, or deleted.
 
 ## Not in scope
 

@@ -38,3 +38,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0024](0024-entity-ids-uuidv7.md) | Entity ids are UUIDv7, minted by the owning service | Accepted |
 | [0025](0025-persistence-layer-maintains-updated-at.md) | The persistence layer maintains `updated_at` | Accepted |
 | [0026](0026-sku-code-is-an-allocation.md) | A SKU code is an allocation, not a column | Accepted |
+| [0027](0027-base-price-is-derived.md) | `base_price` is derived from SKU prices | Accepted |

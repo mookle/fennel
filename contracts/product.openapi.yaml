@@ -270,7 +270,11 @@ components:
         name: { type: string }
         description: { type: string }
         status: { $ref: '#/components/schemas/ProductStatus' }
-        base_price: { $ref: '#/components/schemas/Money' }
+        base_price:
+          allOf:
+            - $ref: '#/components/schemas/Money'
+          readOnly: true
+          description: the lowest price among the product's SKUs. Absent while the product has none (ADR-0027)
         currency: { $ref: '#/components/schemas/Currency' }
         label_slugs: { type: array, items: { type: string } }
         created_at: { type: string, format: date-time }
@@ -290,7 +294,6 @@ components:
         name: { type: string }
         description: { type: string }
         currency: { $ref: '#/components/schemas/Currency' }
-        base_price: { $ref: '#/components/schemas/Money' }
         label_slugs: { type: array, items: { type: string } }
     ProductPatch:
       type: object
@@ -298,7 +301,6 @@ components:
       properties:
         name: { type: string }
         description: { type: string }
-        base_price: { $ref: '#/components/schemas/Money' }
         status: { $ref: '#/components/schemas/ProductStatus' }
         label_slugs: { type: array, items: { type: string } }
 
