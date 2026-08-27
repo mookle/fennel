@@ -60,7 +60,9 @@ Attributes are optional: a product has 0-n attributes, and each attribute has 1-
 
 The sellable, orderable unit. The shop creates each SKU by hand from a chosen combination of attribute options, then sets the available quantity. A SKU carries one option for each attribute the product holds, and one SKU exists per distinct combination, which a uniqueness constraint over the SKU's sorted option ids enforces (ADR-0023). On a product with no attributes the combination is empty, so the product carries at most one SKU.
 
-Fields: `id`, `product_id`, `sku_code_id`, `price`, `currency`, `created_at`, `updated_at`. `sku_code_id` is a unique reference to the SKU's code allocation (see SkuCode below), and the API presents the allocation's code as `code` (ADR-0026).
+Fields: `id`, `product_id`, `sku_code_id`, `price`, `created_at`, `updated_at`. `sku_code_id` is a unique reference to the SKU's code allocation (see SkuCode below), and the API presents the allocation's code as `code` (ADR-0026).
+
+Currency is **not** a column here. A SKU's price is in its product's currency, and the API composes `currency` from the product row on read (ADR-0028).
 
 The applied option combination lives in the `sku_options` join table (`sku_id`, `option_id`), one row per applied option, and no rows for an option-less SKU. The API presents it as `option_ids`. A join table rather than an id array keeps the foreign keys real, and it answers "which SKUs use this option", which is the question SKU dynamism asks (see the notes below).
 
