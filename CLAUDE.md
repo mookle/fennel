@@ -12,7 +12,6 @@ The operating guide for any agent that works in this repository.
 - **Every big decision gets an ADR.** Add a new file under `docs/decisions/` with the next number, in MADR-lite form (Status, Context, Decision, Consequences) and add an index row in `docs/decisions/README.md`. Update the live documents the new decision touches.
 - **An ADR is a record, not a live document.** It states one decision at one moment. When a decision changes, write a new ADR, amend the Status line of the old one, and leave its body alone. An ADR cites only records that already existed when it was written, and the Status line holds the only forward pointer. `docs/decisions/README.md` states the full rule.
 - **Do not re-open a settled decision casually.** The ADRs hold the reasoning and the rejected alternatives. Read the relevant one before you propose a change.
-- **`apps/product/`** is human-authored. Never create or modify files there unless explicitly asked. A deny rule in `.claude/settings.json` enforces this.
 
 ## Authoring documentation 
 

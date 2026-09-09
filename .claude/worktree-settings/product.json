@@ -2,8 +2,8 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "deny": [
-      "Edit(./apps/product/**)",
-      "Write(./apps/product/**)"
+      "Edit(./apps/cart/**)", "Write(./apps/cart/**)",
+      "Edit(./apps/order/**)", "Write(./apps/order/**)"
     ]
   }
 }
