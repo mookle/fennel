@@ -9,6 +9,9 @@ var (
 	// ErrRange reports a value outside NUMERIC(15,4).
 	ErrRange = errors.New("outside NUMERIC(15,4)")
 
+	// ErrCurrency reports a code that does not name an ISO 4217 currency.
+	ErrCurrency = errors.New("does not name a currency")
+
 	// ErrNull reports a SQL NULL read into a type that holds no absent value.
 	ErrNull = errors.New("null into a value that cannot be absent")
 

@@ -254,7 +254,9 @@ components:
       example: "12.5000"
     Currency:
       type: string
-      description: ISO-4217 code.
+      description: >
+        ISO 4217 code. The pattern fixes the shape. The service also requires
+        the code to identify a currency, so it will reject a fund code, a precious metal, XXX and XTS with a 400. A withdrawn code such as HRK is a currency and passes (ADR-0030).
       pattern: '^[A-Z]{3}$'
       example: "GBP"
     ProductStatus:

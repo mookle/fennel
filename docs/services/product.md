@@ -24,7 +24,7 @@ The package layout can mirror the three domains (`internal/catalogue`, `internal
 
 The customer-facing listing. A product lists only when at least one SKU exists; short of that it stays `incomplete`. The sellable units (SKUs) come from combinations of attribute options, and a product with no attributes carries the single empty combination.
 
-Fields: `id`, `shop_id`, `name` (a descriptor, not `title`), `description`, `currency`, `base_price`, `created_at`, `updated_at`. `base_price` is the lowest price among the product's SKUs, which the persistence layer maintains on every SKU write and the API presents as read-only. It is null while the product has no SKUs, a state which satisfies the `incomplete` status (ADR-0027). `currency` is a stand-in for the shop's currency, as shop has no record in this build (ADR-0029).
+Fields: `id`, `shop_id`, `name` (a descriptor, not `title`), `description`, `currency`, `base_price`, `created_at`, `updated_at`. `base_price` is the lowest price among the product's SKUs, which the persistence layer maintains on every SKU write and the API presents as read-only. It is null while the product has no SKUs, a state which satisfies the `incomplete` status (ADR-0027). `currency` is a stand-in for the shop's currency, as shop has no record in this build (ADR-0029). `product` takes an ISO 4217 currency code, rejecting anything else with a 400 (ADR-0030).
 
 **Statuses**:
 
