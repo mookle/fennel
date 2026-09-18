@@ -42,3 +42,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0028](0028-currency-lives-on-the-product.md) | Currency lives on the product, not the SKU | Accepted |
 | [0029](0029-product-currency-stands-in-for-shop.md) | The product's currency stands in for the shop's | Accepted |
 | [0030](0030-currency-must-hold-iso-4217-code.md) | Currency must hold an ISO 4217 currency code | Accepted |
+| [0031](0031-absent-amount-is-a-separate-type.md) | An absent amount is a separate type | Accepted |

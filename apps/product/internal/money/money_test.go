@@ -118,7 +118,8 @@ func TestMoneyUnmarshalJSONRejectsNonString(t *testing.T) {
 
 func TestMoneyUnmarshalJSONRejectsNull(t *testing.T) {
 	// encoding/json reads null into a string as a no-op, so this has to be
-	// ruled out on its own. Money holds no absent value.
+	// ruled out on its own. Money holds no absent value, and the error points
+	// at the type that does (ADR-0031).
 	var a Money
 	if err := a.UnmarshalJSON([]byte("null")); !errors.Is(err, ErrNull) {
 		t.Errorf("UnmarshalJSON(null) error = %v, want ErrNull", err)
@@ -151,7 +152,7 @@ func TestMoneyScanRejects(t *testing.T) {
 		src  any
 		want error
 	}{
-		// A NULL is absence, and Money holds none.
+		// A NULL is absence, and Money holds none. NullMoney does.
 		{nil, ErrNull},
 		// A float reached this point having already lost precision, so the
 		// text was never the problem.

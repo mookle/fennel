@@ -7,7 +7,6 @@
 package money
 
 import (
-	"bytes"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
@@ -104,15 +103,9 @@ func (m Money) MarshalJSON() ([]byte, error) {
 	return strconv.AppendQuote(nil, m.String()), nil
 }
 
-// isJSONNull reports whether b is the JSON null literal. encoding/json reads
-// null into a string as a no-op rather than as an error, so UnmarshalJSON
-// has to rule it out before it decodes.
-func isJSONNull(b []byte) bool {
-	return bytes.Equal(bytes.TrimSpace(b), []byte("null"))
-}
-
 // UnmarshalJSON reads the amount from a JSON string. It rejects a JSON number
-// and it rejects null, because Money holds no absent value.
+// and it rejects null, because Money holds no absent value. A nullable field
+// reads into a NullMoney (ADR-0031).
 func (m *Money) UnmarshalJSON(b []byte) error {
 	if isJSONNull(b) {
 		return fmt.Errorf("money: unmarshal null: %w", ErrNull)
@@ -142,7 +135,8 @@ func (m Money) Value() (driver.Value, error) {
 // It rejects a float, which a driver only produces once the value has lost
 // precision, and it reports that as ErrPrecision rather than as a malformed
 // string, because the text was never the problem. It rejects a NULL, because
-// Money holds no absent value.
+// Money holds no absent value. A nullable column reads into a NullMoney
+// (ADR-0031).
 func (m *Money) Scan(src any) error {
 	switch v := src.(type) {
 	case string:
