@@ -56,7 +56,7 @@ Attributes are optional: a product has 0-n attributes, and each attribute has 1-
 - `Attribute`: `id`, `product_id`, `name`.
 - `AttributeOption`: `id`, `attribute_id`, `name`.
 
-### SKU
+### Sku
 
 The sellable, orderable unit. The shop creates each SKU by hand from a chosen combination of attribute options, then sets the available quantity. A SKU carries one option for each attribute the product holds, and one SKU exists per distinct combination, which a uniqueness constraint over the SKU's sorted option ids enforces (ADR-0023). On a product with no attributes the combination is empty, so the product carries at most one SKU.
 
@@ -74,21 +74,21 @@ Notes:
 - SKUs are dynamic: if the shop removes an attribute option, the SKUs that used it are deleted, not archived. No endpoint removes an option in this build, so the rule is latent, but the boundary already absorbs it. `POST /v1/skus:batchGet` returns the missing ids so `cart` can fail the affected lines, and an accepted order needs nothing from the row because `order_sku` is the crystallised copy (ADR-0004).
 - Deletion never frees a code. Once the product has been live, the dead SKU's allocation stands, whether the SKU was deleted directly or by cascade, so external artefacts such as labels and spreadsheets never see a code point at different goods (ADR-0026, see SkuCode below).
 
-### SkuCode
+### SKU code allocation
 
-The allocation of a code to a shop, and the single answer to "is this code taken". The code string lives here, not on the SKU row (ADR-0026).
+The allocation of a code to a shop, and the single answer to the question "is this code taken?". The code string lives here, not on the SKU row (ADR-0026).
 
-- `SkuCode`: `id`, `shop_id`, `code`, `created_at`, `updated_at`. `(shop_id, code)` is unique.
+- `sku_codes`: `id`, `shop_id`, `code`, `created_at`, `updated_at`. `(shop_id, code)` is unique.
 
 `id` is an integer, and this is the one table that does not take a UUIDv7. An allocation is an internal construct rather than an entity: it never appears on the wire, and `Sku.sku_code_id` is the only thing that ever references it (ADR-0026, ADR-0024).
 
 Creating a SKU claims its code by inserting the allocation, and a conflict on that insert is the per-shop uniqueness failure behind the 409 on `POST /v1/skus`. While the product has never been live, an allocation can change or be released: a pre-live edit updates it in place, and deleting a never-live SKU deletes it. From the product's first go-live the allocation is permanent, and deleting the SKU leaves it standing.
 
-### SkuStock
+### SKU stock
 
-Stock lives in a separate, narrow table keyed by `sku_id`. It is not a column on `sku`.
+Stock lives in a separate, narrow table keyed by `sku_id`. It is not a column on `skus`.
 
-- `SkuStock`: `sku_id` (primary key, foreign key to `sku`), `available_quantity`, `created_at`, `updated_at`.
+- `sku_stock`: `sku_id` (primary key, foreign key to `skus`), `available_quantity`, `created_at`, `updated_at`.
 
 `created_at` marks the first stock write for the SKU, and `updated_at` the last (ADR-0018).
 
