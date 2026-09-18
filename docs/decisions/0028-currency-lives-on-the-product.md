@@ -1,6 +1,6 @@
 # 0028 - Currency lives on the product, not the SKU
 
-Status: Accepted
+Status: Accepted (amended by ADR-0032)
 
 ## Context
 

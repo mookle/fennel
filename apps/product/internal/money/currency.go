@@ -29,9 +29,9 @@ var notCurrency = map[string]struct{}{
 }
 
 // Currency is an ISO 4217 code that names a currency, current or withdrawn
-// (ADR-0030). It sits beside every Money an entity holds, and it exists on a
-// product as the shop's stand-in (ADR-0029). Arithmetic between two of them
-// has no defined result (ADR-0017).
+// (ADR-0030). It is the currency half of a Money (ADR-0032), and it stands
+// alone on a product as the shop's stand-in (ADR-0029). Arithmetic between
+// two of them has no defined result (ADR-0017).
 //
 // ParseCurrency is the only way to populate one, but Go always admits the
 // zero value, and an empty code is not a currency. No currency field is

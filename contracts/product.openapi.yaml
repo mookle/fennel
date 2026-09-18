@@ -7,8 +7,8 @@ info:
     attributes and options, labels, and shipping cost calculation. The cart
     service consumes the read endpoints and the shipping quote, so those must
     stay stable. The management endpoints are the own surface of the product
-    domain. Money is a decimal string, paired with an ISO-4217 currency
-    (ADR-0017).
+    domain. Money is an object of a decimal string and an ISO-4217 currency,
+    which is one value (ADR-0017, ADR-0032).
 servers:
   - url: http://product.internal/v1
     description: In-cluster base URL
@@ -244,7 +244,7 @@ components:
       description: Shared in-cluster bearer token. No mTLS in this build (ADR-0008).
 
   schemas:
-    Money:
+    Amount:
       type: string
       description: >
         Numeric(15,4) as a string to preserve precision, never a JSON number
@@ -252,6 +252,15 @@ components:
         stays looser than that, so a request does not have to pad.
       pattern: '^-?\d{1,11}(\.\d{1,4})?$'
       example: "12.5000"
+    Money:
+      type: object
+      description: >
+        An amount and its currency, which are one value (ADR-0032). A response
+        carries both or neither, and a value with one half is not admitted.
+      required: [amount, currency]
+      properties:
+        amount: { $ref: '#/components/schemas/Amount' }
+        currency: { $ref: '#/components/schemas/Currency' }
     Currency:
       type: string
       description: >
@@ -336,13 +345,12 @@ components:
 
     Sku:
       type: object
-      required: [id, product_id, code, price, currency, available_quantity]
+      required: [id, product_id, code, price, available_quantity]
       properties:
         id: { type: string, format: uuid }
         product_id: { type: string, format: uuid }
         code: { type: string, example: "APN0MTS" }
         price: { $ref: '#/components/schemas/Money' }
-        currency: { $ref: '#/components/schemas/Currency' }
         available_quantity: { type: integer, minimum: 0 }
         option_ids: { type: array, items: { type: string, format: uuid } }
         created_at: { type: string, format: date-time }
@@ -354,7 +362,7 @@ components:
         product_id: { type: string, format: uuid }
         code: { type: string, description: seller-supplied, unique per shop (ADR-0023) }
         option_ids: { type: array, items: { type: string, format: uuid }, description: one option per attribute the product holds. Empty for a product with no attributes }
-        price: { $ref: '#/components/schemas/Money' }
+        price: { $ref: '#/components/schemas/Amount', description: the amount alone. The service composes the value from the product's currency (ADR-0028, ADR-0032) }
         available_quantity: { type: integer, minimum: 0 }
     ResolvedSku:
       type: object
@@ -363,7 +371,7 @@ components:
         product's name, description and shop_id, the resolved option names,
         and the stock. It is self-contained so that checkout can crystallise
         a Purchase line from one payload with no follow-up read (ADR-0004).
-      required: [sku_id, product_id, shop_id, sku_code, name, price, currency, available_quantity]
+      required: [sku_id, product_id, shop_id, sku_code, name, price, available_quantity]
       properties:
         sku_id: { type: string, format: uuid }
         product_id: { type: string, format: uuid }
@@ -372,7 +380,6 @@ components:
         name: { type: string, description: product name at time of read }
         description: { type: string }
         price: { $ref: '#/components/schemas/Money' }
-        currency: { $ref: '#/components/schemas/Currency' }
         available_quantity: { type: integer, minimum: 0 }
         options:
           type: array
@@ -403,9 +410,8 @@ components:
               quantity: { type: integer, minimum: 1 }
     ShippingQuoteResponse:
       type: object
-      required: [currency, lines, total]
+      required: [lines, total]
       properties:
-        currency: { $ref: '#/components/schemas/Currency' }
         lines:
           type: array
           items:
@@ -442,9 +448,9 @@ components:
   examples:
     # Canonical payloads for the endpoints `cart` consumes (ADR-0015). These are
     # the source for cart's test doubles: extract them, do not transcribe them.
-    # Note the deliberate shapes: money is a padded decimal string (ADR-0017),
-    # and updated_at is always present, equal to created_at until the first
-    # write (ADR-0018).
+    # Note the deliberate shapes: money is an object of a padded decimal string
+    # and a currency (ADR-0017, ADR-0032), and updated_at is always present,
+    # equal to created_at until the first write (ADR-0018).
     ProductPage:
       summary: One page of the catalogue query
       value:
@@ -454,7 +460,7 @@ components:
             name: "A Pretty necklace"
             description: "Hand-made silver pendant on a fine chain."
             status: "active"
-            base_price: "24.0000"
+            base_price: { amount: "24.0000", currency: "GBP" }
             currency: "GBP"
             label_slugs: ["jewellery", "silver"]
             created_at: "2026-05-04T09:12:00Z"
@@ -464,7 +470,7 @@ components:
             name: "Beeswax Wrap Set"
             description: "Three reusable food wraps."
             status: "active"
-            base_price: "12.5000"
+            base_price: { amount: "12.5000", currency: "GBP" }
             currency: "GBP"
             label_slugs: ["kitchen"]
             created_at: "2026-05-06T14:41:10Z"
@@ -481,7 +487,7 @@ components:
         name: "A Pretty necklace"
         description: "Hand-made silver pendant on a fine chain."
         status: "active"
-        base_price: "24.0000"
+        base_price: { amount: "24.0000", currency: "GBP" }
         currency: "GBP"
         label_slugs: ["jewellery", "silver"]
         created_at: "2026-05-04T09:12:00Z"
@@ -499,8 +505,7 @@ components:
           - id: "019df244-fa20-72b6-a1cf-300ff7354d1d"
             product_id: "019df242-3b00-7b38-a574-35b288b2eef2"
             code: "APN0MTS"
-            price: "24.0000"
-            currency: "GBP"
+            price: { amount: "24.0000", currency: "GBP" }
             available_quantity: 3
             option_ids: ["019df242-3b00-772e-8e16-74fe37e5173e"]
             created_at: "2026-05-04T09:15:00Z"
@@ -515,8 +520,7 @@ components:
         sku_code: "APN0MTS"
         name: "A Pretty necklace"
         description: "Hand-made silver pendant on a fine chain."
-        price: "24.0000"
-        currency: "GBP"
+        price: { amount: "24.0000", currency: "GBP" }
         available_quantity: 3
         options:
           - attribute: "Material"
@@ -532,8 +536,7 @@ components:
             sku_code: "APN0MTS"
             name: "A Pretty necklace"
             description: "Hand-made silver pendant on a fine chain."
-            price: "24.0000"
-            currency: "GBP"
+            price: { amount: "24.0000", currency: "GBP" }
             available_quantity: 3
             options:
               - attribute: "Material"
@@ -543,8 +546,7 @@ components:
             shop_id: "shop_7"
             sku_code: "BWS0"
             name: "Beeswax Wrap Set"
-            price: "12.5000"
-            currency: "GBP"
+            price: { amount: "12.5000", currency: "GBP" }
             available_quantity: 0
             options: []
         missing: ["019dfdbc-4f70-75fd-9edf-f8c045786f4a"]
@@ -552,13 +554,12 @@ components:
     ShippingQuote:
       summary: Per-line and total cost for one shop grouping
       value:
-        currency: "GBP"
         lines:
           - sku_id: "019df244-fa20-72b6-a1cf-300ff7354d1d"
-            cost: "3.9500"
+            cost: { amount: "3.9500", currency: "GBP" }
           - sku_id: "019dfdbc-4f70-7952-bc65-165ee40433e7"
-            cost: "0.0000"
-        total: "3.9500"
+            cost: { amount: "0.0000", currency: "GBP" }
+        total: { amount: "3.9500", currency: "GBP" }
 
   responses:
     BadRequest:

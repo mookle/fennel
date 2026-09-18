@@ -1,162 +1,234 @@
-// Package money holds the one representation of a monetary value that
-// storage, the wire and memory share (ADR-0017).
+// Package money holds the two types a monetary value takes in this service
+// (ADR-0017, ADR-0032).
 //
-// A value is a decimal at a fixed scale of four places, which covers the
-// widest ISO-4217 minor unit. It never becomes a binary float, and it
-// crosses the wire as a string, never as a JSON number.
+// Amount is the scalar: a decimal at a fixed scale of four places, which
+// covers the widest ISO-4217 minor unit, and never a binary float. It is the
+// type used in the two places an amount appears without its currency: the value
+// of a NUMERIC(15,4) column, and the price on SkuWrite, where the product
+// supplies the currency.
+//
+// Money pairs an Amount with a Currency and is the value the domain reasons
+// about. It owns arithmetic and comparison, and it is the shape of every
+// amount in a response.
 package money
 
 import (
-	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"strconv"
+	"math"
 	"strings"
 )
 
-// Scale is the number of decimal places every amount carries. It matches
-// the scale of the NUMERIC(15,4) column.
-const Scale = 4
-
-const (
-	scaleFactor      = 10_000
-	maxIntegerDigits = 15 - Scale
-
-	// maxUnits is the unit count of the largest value NUMERIC(15,4) holds,
-	// which is 99999999999.9999.
-	maxUnits = 999_999_999_999_999
-)
-
-// Money is an exact decimal amount at a scale of four places.
+// Money is an amount and its currency, held as one value (ADR-0032).
 //
-// It carries no currency. An amount without a currency has no meaning, so
-// every entity that holds a Money holds a currency code beside it, and a
-// product holds its currency from creation, before it has a price at all
-// (ADR-0027, ADR-0028). Arithmetic across two currencies has no defined
-// result, and the caller that owns both currencies is the only place that
-// can enforce this.
+// A value with one half is not admitted: the zero value is unusable, and
+// MarshalJSON refuses it. Every method that takes a second Money reports
+// ErrMismatch when the currencies differ (ADR-0032).
+//
+// A response carries a Money as an object with both halves. A column holds
+// the Amount alone, and a read composes the pair from the amount column and
+// the product's currency (ADR-0028), so Scan reads a composite and there is
+// no Value. A write passes m.Amount. Absence is absence of the whole value,
+// and NullMoney holds it (ADR-0031).
 type Money struct {
-	units int64
+	Amount   Amount
+	Currency Currency
 }
 
-// Parse reads the wire form. It takes one to eleven integer digits, an
-// optional minus sign, and zero to four decimal places, which is the pattern
-// the OpenAPI contract states. It pads a short input to the full scale, so
-// "12.5" and "12.5000" parse alike.
-func Parse(s string) (Money, error) {
-	unsigned, negative := strings.CutPrefix(s, "-")
-
-	whole, fraction, decimal := strings.Cut(unsigned, ".")
-	if len(whole) < 1 || len(whole) > maxIntegerDigits || !allDigits(whole) {
-		return Money{}, fmt.Errorf("money: parse %q: %w", s, ErrSyntax)
-	}
-	if decimal && (len(fraction) < 1 || len(fraction) > Scale || !allDigits(fraction)) {
-		return Money{}, fmt.Errorf("money: parse %q: %w", s, ErrSyntax)
-	}
-
-	// Eleven integer digits and four decimal digits reach 999999999999999
-	// units, which is exactly maxUnits, so the accumulation below cannot
-	// leave the range and needs no check.
-	var units int64
-	for _, r := range whole {
-		units = units*10 + int64(r-'0')
-	}
-	for i := range Scale {
-		units *= 10
-		if i < len(fraction) {
-			units += int64(fraction[i] - '0')
-		}
-	}
-	if negative {
-		units = -units
-	}
-	return Money{units: units}, nil
+// moneyJSON is the wire shape. The contract names both fields required.
+type moneyJSON struct {
+	Amount   Amount   `json:"amount"`
+	Currency Currency `json:"currency"`
 }
 
-func allDigits(s string) bool {
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			return false
-		}
-	}
-	return true
-}
-
-// String returns the wire form, padded to exactly four decimal places. A yen
-// amount reads "1000.0000", because padding a currency's own minor unit would
-// round away a price quoted finer than it (ADR-0017).
+// String returns the amount and the code, as "24.0000 GBP". It is for errors
+// and logs, and nothing parses it.
 func (m Money) String() string {
-	units, sign := m.units, ""
-	if units < 0 {
-		units, sign = -units, "-"
-	}
-	return fmt.Sprintf("%s%d.%0*d", sign, units/scaleFactor, Scale, units%scaleFactor)
+	return m.Amount.String() + " " + m.Currency.String()
 }
 
-// MarshalJSON writes the amount as a string. JSON parsers commonly read a
-// number as an IEEE 754 double, which loses the precision this type exists
-// to keep.
-//
-// String emits a minus sign, digits and a point and nothing else, so the
-// quoted form needs no escaping.
+// MarshalJSON writes the pair as an object. The zero value fails, because
+// Currency refuses to marshal an empty code.
 func (m Money) MarshalJSON() ([]byte, error) {
-	return strconv.AppendQuote(nil, m.String()), nil
+	return json.Marshal(moneyJSON{Amount: m.Amount, Currency: m.Currency})
 }
 
-// UnmarshalJSON reads the amount from a JSON string. It rejects a JSON number
-// and it rejects null, because Money holds no absent value. A nullable field
-// reads into a NullMoney (ADR-0031).
+// UnmarshalJSON reads the pair from a JSON object. It rejects null, a missing
+// field and a null field as ErrNull, because Money holds no absent value and
+// a value with one half is not admitted. A nullable field reads into a
+// NullMoney (ADR-0031). Anything that is not an object is ErrSyntax.
 func (m *Money) UnmarshalJSON(b []byte) error {
 	if isJSONNull(b) {
 		return fmt.Errorf("money: unmarshal null: %w", ErrNull)
 	}
 
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(b, &fields); err != nil {
 		return fmt.Errorf("money: unmarshal %s: %w", b, ErrSyntax)
 	}
 
-	parsed, err := Parse(s)
-	if err != nil {
+	amount, ok := fields["amount"]
+	if !ok {
+		return fmt.Errorf("money: unmarshal %s: no amount: %w", b, ErrNull)
+	}
+	currency, ok := fields["currency"]
+	if !ok {
+		return fmt.Errorf("money: unmarshal %s: no currency: %w", b, ErrNull)
+	}
+
+	var parsed Money
+	if err := parsed.Amount.UnmarshalJSON(amount); err != nil {
+		return err
+	}
+	if err := parsed.Currency.UnmarshalJSON(currency); err != nil {
 		return err
 	}
 	*m = parsed
 	return nil
 }
 
-// Value writes the amount to a NUMERIC(15,4) column. The driver reads the
-// string back as an exact decimal.
-func (m Money) Value() (driver.Value, error) {
-	return m.String(), nil
-}
-
-// Scan reads the amount from a NUMERIC(15,4) column.
+// Scan reads the pair from a Postgres composite of (amount, currency), which
+// a read composes from the amount column and the product's currency
+// (ADR-0028, ADR-0032). The text form is "(24.0000,GBP)".
 //
-// It rejects a float, which a driver only produces once the value has lost
-// precision, and it reports that as ErrPrecision rather than as a malformed
-// string, because the text was never the problem. It rejects a NULL, because
-// Money holds no absent value. A nullable column reads into a NullMoney
-// (ADR-0031).
+// It rejects a NULL, because Money holds no absent value, and a nullable
+// column reads into a NullMoney (ADR-0031). It rejects text that is not a
+// composite as ErrSyntax, which is what a bare amount column produces. It
+// rejects an empty field as ErrNull, because a value with one half is not
+// admitted. Each field then reads through Amount.Scan and Currency.Scan, so
+// ErrRange and ErrCurrency come from there.
+//
+// Postgres double-quotes a field that holds a comma, a parenthesis, a quote,
+// a backslash or whitespace, and it doubles a quote inside one. A NUMERIC and
+// a three-letter code hold none of those, so this parser reads no quoting.
 func (m *Money) Scan(src any) error {
+	var s string
 	switch v := src.(type) {
 	case string:
-		parsed, err := Parse(v)
-		if err != nil {
-			return err
-		}
-		*m = parsed
+		s = v
 	case []byte:
-		parsed, err := Parse(string(v))
-		if err != nil {
-			return err
-		}
-		*m = parsed
+		s = string(v)
 	case nil:
 		return fmt.Errorf("money: scan null: %w", ErrNull)
-	case float64, float32:
-		return fmt.Errorf("money: scan %T: %w", src, ErrPrecision)
 	default:
 		return fmt.Errorf("money: scan %T: %w", src, ErrSyntax)
 	}
+
+	inner, ok := strings.CutPrefix(s, "(")
+	if !ok {
+		return fmt.Errorf("money: scan %q: %w", s, ErrSyntax)
+	}
+	inner, ok = strings.CutSuffix(inner, ")")
+	if !ok {
+		return fmt.Errorf("money: scan %q: %w", s, ErrSyntax)
+	}
+	amount, currency, ok := strings.Cut(inner, ",")
+	if !ok || strings.Contains(currency, ",") {
+		return fmt.Errorf("money: scan %q: %w", s, ErrSyntax)
+	}
+	if amount == "" || currency == "" {
+		return fmt.Errorf("money: scan %q: %w", s, ErrNull)
+	}
+
+	var parsed Money
+	if err := parsed.Amount.Scan(amount); err != nil {
+		return err
+	}
+	if err := parsed.Currency.Scan(currency); err != nil {
+		return err
+	}
+	*m = parsed
 	return nil
+}
+
+// same reports whether n shares m's currency, and names the pair in the error
+// when it does not.
+func (m Money) sameCurrency(n Money) error {
+	if m.Currency != n.Currency {
+		return fmt.Errorf("money: %s and %s: %w", m, n, ErrMismatch)
+	}
+	return nil
+}
+
+// Add returns the sum. Both operands sit inside NUMERIC(15,4), so only the
+// result can leave the range.
+func (m Money) Add(n Money) (Money, error) {
+	if err := m.sameCurrency(n); err != nil {
+		return Money{}, err
+	}
+	amount, err := fromUnits(m.Amount.units + n.Amount.units)
+	if err != nil {
+		return Money{}, err
+	}
+	return Money{Amount: amount, Currency: m.Currency}, nil
+}
+
+// Sub returns the difference. Both operands sit inside NUMERIC(15,4), so only
+// the result can leave the range.
+func (m Money) Sub(n Money) (Money, error) {
+	if err := m.sameCurrency(n); err != nil {
+		return Money{}, err
+	}
+	amount, err := fromUnits(m.Amount.units - n.Amount.units)
+	if err != nil {
+		return Money{}, err
+	}
+	return Money{Amount: amount, Currency: m.Currency}, nil
+}
+
+// Neg returns the value with its sign flipped. The range is symmetric, so
+// this never leaves it.
+func (m Money) Neg() Money {
+	return Money{Amount: Amount{units: -m.Amount.units}, Currency: m.Currency}
+}
+
+// Mul returns the value taken quantity times, which is how a shipping line
+// forms (ADR-0007). Nothing rounds, because the amount is at scale 4 and the
+// quantity is a whole number. One operand carries a currency, so nothing can
+// mismatch.
+func (m Money) Mul(quantity int64) (Money, error) {
+	units := m.Amount.units
+	if units == 0 || quantity == 0 {
+		return Money{Currency: m.Currency}, nil
+	}
+	if quantity == math.MinInt64 || abs(units) > maxUnits/abs(quantity) {
+		return Money{}, fmt.Errorf("money: %s x %d: %w", m, quantity, ErrRange)
+	}
+	amount, err := fromUnits(units * quantity)
+	if err != nil {
+		return Money{}, err
+	}
+	return Money{Amount: amount, Currency: m.Currency}, nil
+}
+
+// Compare orders two values. It returns -1 when m is below n, 0 when they
+// hold the same amount, and 1 when m is above n. It is the ordering
+// base_price derives from (ADR-0027). Two values in different currencies
+// have no order, and that is ErrMismatch.
+func (m Money) Compare(n Money) (int, error) {
+	if err := m.sameCurrency(n); err != nil {
+		return 0, err
+	}
+	switch {
+	case m.Amount.units < n.Amount.units:
+		return -1, nil
+	case m.Amount.units > n.Amount.units:
+		return 1, nil
+	default:
+		return 0, nil
+	}
+}
+
+// Equal reports whether two values hold the same amount in the same
+// currency. Two values in different currencies are never equal, and that is
+// a false rather than an error, because inequality is a defined result.
+func (m Money) Equal(n Money) bool {
+	return m.Currency == n.Currency && m.Amount.units == n.Amount.units
+}
+
+func abs(n int64) int64 {
+	if n < 0 {
+		return -n
+	}
+	return n
 }

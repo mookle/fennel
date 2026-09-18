@@ -24,7 +24,7 @@ The package layout can mirror the three domains (`internal/catalogue`, `internal
 
 The customer-facing listing. A product lists only when at least one SKU exists; short of that it stays `incomplete`. The sellable units (SKUs) come from combinations of attribute options, and a product with no attributes carries the single empty combination.
 
-Fields: `id`, `shop_id`, `name` (a descriptor, not `title`), `description`, `currency`, `base_price`, `created_at`, `updated_at`. `base_price` is the lowest price among the product's SKUs, which the persistence layer maintains on every SKU write and the API presents as read-only. It is null while the product has no SKUs, a state which satisfies the `incomplete` status (ADR-0027). `currency` is a stand-in for the shop's currency, as shop has no record in this build (ADR-0029). `product` takes an ISO 4217 currency code, rejecting anything else with a 400 (ADR-0030).
+Fields: `id`, `shop_id`, `name` (a descriptor, not `title`), `description`, `currency`, `base_price`, `created_at`, `updated_at`. `base_price` is the lowest price among the product's SKUs, which the persistence layer maintains on every SKU write and the API presents as read-only. It is an amount and its currency as one value (ADR-0032), and it is absent while the product has no SKUs, a state which satisfies the `incomplete` status (ADR-0027). `currency` stands in for the shop's currency, as shop has no record in this build (ADR-0029). `product` takes an ISO 4217 currency code, rejecting anything else with a 400 (ADR-0030).
 
 **Statuses**:
 
@@ -62,7 +62,7 @@ The sellable, orderable unit. The shop creates each SKU by hand from a chosen co
 
 Fields: `id`, `product_id`, `sku_code_id`, `price`, `created_at`, `updated_at`. `sku_code_id` is a unique reference to the SKU's code allocation (see SkuCode below), and the API presents the allocation's code as `code` (ADR-0026).
 
-Currency is **not** a column here. A SKU's price is in its product's currency, and the API composes `currency` from the product row on read (ADR-0028).
+Currency is **not** a column here. A SKU's price is in its product's currency, and a read composes `price` as one value from the amount column and the product row's currency (ADR-0028, ADR-0032).
 
 The applied option combination lives in the `sku_options` join table (`sku_id`, `option_id`), one row per applied option, and no rows for an option-less SKU. The API presents it as `option_ids`. A join table rather than an id array keeps the foreign keys real, and it answers "which SKUs use this option", which is the question SKU dynamism asks (see the notes below).
 
@@ -134,7 +134,7 @@ One tax type, no rates and no logic. Tax is out of scope. Do not model tax table
 
 - `GET /v1/products`: catalogue query and search. The filters are `shop_id`, `label`, `q` and `status`. The results are paginated. The public read returns `active` products only.
 - `GET /v1/products/{id}`: product detail with the attributes, the options and the SKUs.
-- `GET /v1/skus/{id}` and `POST /v1/skus:batchGet`: the `ResolvedSku` payloads that cart and checkout consume. Each response is self-contained: `sku_code`, `product_id`, `shop_id`, `name`, `description`, `price`, `currency`, `available_quantity`, and the resolved options.
+- `GET /v1/skus/{id}` and `POST /v1/skus:batchGet`: the `ResolvedSku` payloads that cart and checkout consume. Each response is self-contained: `sku_code`, `product_id`, `shop_id`, `name`, `description`, `price`, `available_quantity`, and the resolved options.
 - `POST /v1/shipping/quote`: takes `{ destination, items[] }` and returns the per-line and total shipping cost. The caller (checkout) treats the result as opaque.
 
 **Product-domain management (this service's own surface):**
@@ -161,7 +161,21 @@ The contract holds nothing else. Deletion, option removal, later stock correctio
 
 `sku_stock` is separate from `skus` on purpose. See SkuStock above for the reason.
 
-`base_price` is updated whenever an SKU is inserted, updated, or deleted.
+An amount and its currency are one value, and a read hands the pair to the application as one column (ADR-0032). One composite type serves every such read:
+
+```sql
+CREATE TYPE money_value AS (amount NUMERIC(15,4), currency <the type of products.currency>);
+```
+
+A read of an SKU's price composes `(s.price, p.currency)::money_value`. A read of `base_price` routes the absent case to a plain NULL rather than to a composite with an empty amount: `CASE WHEN p.base_price IS NULL THEN NULL ELSE (p.base_price, p.currency)::money_value END`. No write uses the type. A write passes the amount alone, and the columns hold what they held before.
+
+The `base_price` derivation is one statement in the SKU write's transaction, and it runs after every SKU insert, update or delete (ADR-0027):
+
+```sql
+UPDATE products SET base_price = (SELECT MIN(price) FROM skus WHERE product_id = $1), updated_at = $2 WHERE id = $1;
+```
+
+`MIN` over no rows is NULL, so the absent case needs no branch.
 
 ## Not in scope
 
