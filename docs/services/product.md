@@ -157,7 +157,7 @@ The contract holds nothing else. Deletion, option removal, later stock correctio
 
 `product` owns its own Postgres database. The suggested tables mirror the model above: `products`, `product_status_history`, `attributes`, `attribute_options`, `skus`, `sku_codes`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`, `shipping_rules`, and `processed_events` for idempotency. Every entity id is a UUIDv7 that the service creates, on a `uuid` column with a `DEFAULT uuidv7()` for the seed data that writes `shipping_rules` directly (ADR-0024). `sku_codes` and `product_status_history` are the two exceptions, and each section above says why.
 
-Goose owns the migrations, which live in `apps/product/migrations/` as hand-written SQL. Compose runs the database (ADR-0033).
+Goose owns the migrations, which live in `apps/product/migrations/` as hand-written SQL. Compose runs the database (ADR-0033). `apps/product/README.md` covers running the migrations and the tests.
 
 `sku_stock` is separate from `skus` on purpose. See "SKU stock" above for the reason.
 
