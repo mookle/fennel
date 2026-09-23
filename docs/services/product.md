@@ -41,7 +41,9 @@ The public catalogue query returns `active` products only.
 
 Every status transition writes one row, in the same transaction as the write it accompanies. `reported` can recur, so the history is the only place the earlier occurrences survive (ADR-0019).
 
-Fields: `product_id`, `status`, `reason`, `created_at`.
+Fields: `id`, `product_id`, `status`, `reason`, `created_at`.
+
+`id` is an integer rather than a UUIDv7. A history row is bookkeeping rather than an entity: it never appears on the wire, and nothing references it (ADR-0024, ADR-0026). The read needs it, because "the most recent row" has to be deterministic and `created_at` alone cannot break a tie between two transitions written at one timestamp.
 
 The history is what restores a reported product. A return from `reported` needs the status the product held before it, and one column cannot hold a value that recurs.
 
@@ -153,7 +155,9 @@ The contract holds nothing else. Deletion, option removal, later stock correctio
 
 ## Persistence
 
-`product` owns its own Postgres database. The suggested tables mirror the model above: `products`, `product_status_history`, `attributes`, `attribute_options`, `skus`, `sku_codes`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`, `shipping_rules`, and `processed_events` for idempotency. Every entity id is a UUIDv7 that the service mints, on a `uuid` column with a `DEFAULT uuidv7()` for the seed data that writes `shipping_rules` directly (ADR-0024).
+`product` owns its own Postgres database. The suggested tables mirror the model above: `products`, `product_status_history`, `attributes`, `attribute_options`, `skus`, `sku_codes`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`, `shipping_rules`, and `processed_events` for idempotency. Every entity id is a UUIDv7 that the service creates, on a `uuid` column with a `DEFAULT uuidv7()` for the seed data that writes `shipping_rules` directly (ADR-0024). `sku_codes` and `product_status_history` are the two exceptions, and each section above says why.
+
+Goose owns the migrations, which live in `apps/product/migrations/` as hand-written SQL. Compose runs the database (ADR-0033).
 
 `sku_stock` is separate from `skus` on purpose. See "SKU stock" above for the reason.
 
