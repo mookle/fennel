@@ -21,7 +21,7 @@ A code is more than a business fact about an SKU: it is an allocation with lifec
 - The code string lives only on the allocation.
 - While the product has never been live, an allocation can change or be released: a pre-live edit updates the row in place, and deleting a never-live SKU deletes its allocation with it. From first go-live the allocation is permanent, and deleting an SKU, directly or by cascade, leaves it standing.
 - A retired code is an allocation with no live SKU. The unique index on `sku_codes` keeps it from reassignment.
-- `SkuCode` is an internal construct, not an entity. It has an integer id.
+- An allocation is an internal construct, not an entity. It has an integer id.
 
 ## Consequences
 
@@ -29,7 +29,7 @@ A code is more than a business fact about an SKU: it is an allocation with lifec
 - No two SKUs can ever share one allocation.
 - There is one source of truth for the question "is this code taken?", for live and dead codes alike.
 - After go-live, reuse prevention is the default rather than a step: deleting an SKU preserves its code by doing nothing, so no future delete endpoint can forget it. Releasing a pre-live allocation is the one deletion that takes a second explicit write, and a code the outside world has never seen costs nothing if that write goes missing.
-- `Sku` drops `code` and references `SkuCode` uniquely.
+- `Sku` drops `code` and references its allocation uniquely.
 - The per-shop constraint lives on the table that carries `shop_id`, and `sku` never gains the column.
 - SKU creation gains one insert and one foreign key.
 - The allocation table grows forever, because nothing deletes a row after go-live.

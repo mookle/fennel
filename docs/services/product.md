@@ -28,7 +28,7 @@ Fields: `id`, `shop_id`, `name` (a descriptor, not `title`), `description`, `cur
 
 **Statuses**:
 
-- `incomplete`: below the listing threshold above. Every product starts here, because a SKU attaches only after the product row exists.
+- `incomplete`: below the listing threshold above. Every product starts here, because an SKU attaches only after the product row exists.
 - `active`: listed, searchable and purchasable.
 - `hidden`: listable, but the shop has opted out, for example during a holiday.
 - `archived`: delisted and hidden from the shop's normal view. Not editable. Restorable to another status.
@@ -58,31 +58,35 @@ Attributes are optional: a product has 0-n attributes, and each attribute has 1-
 
 ### Sku
 
-The sellable, orderable unit. The shop creates each SKU by hand from a chosen combination of attribute options, then sets the available quantity. A SKU carries one option for each attribute the product holds, and one SKU exists per distinct combination, which a uniqueness constraint over the SKU's sorted option ids enforces (ADR-0023). On a product with no attributes the combination is empty, so the product carries at most one SKU.
+The sellable, orderable unit. The shop creates each SKU by hand from a chosen combination of attribute options, then sets the available quantity. An SKU carries one option for each attribute the product holds, and one SKU exists per distinct combination, which a uniqueness constraint over the SKU's sorted option ids enforces (ADR-0023). On a product with no attributes the combination is empty, so the product carries at most one SKU.
 
-Fields: `id`, `product_id`, `sku_code_id`, `price`, `created_at`, `updated_at`. `sku_code_id` is a unique reference to the SKU's code allocation (see SkuCode below), and the API presents the allocation's code as `code` (ADR-0026).
+Fields: `id`, `product_id`, `sku_code_id`, `price`, `created_at`, `updated_at`. `sku_code_id` is a unique reference to the SKU's code allocation (see "SKU codes" below), and the API presents the allocation's code as `code` (ADR-0026).
 
-Currency is **not** a column here. A SKU's price is in its product's currency, and a read composes `price` as one value from the amount column and the product row's currency (ADR-0028, ADR-0032).
+Currency is **not** a column here. An SKU's price is in its product's currency, and a read composes `price` as one value from the amount column and the product row's currency (ADR-0028, ADR-0032).
 
 The applied option combination lives in the `sku_options` join table (`sku_id`, `option_id`), one row per applied option, and no rows for an option-less SKU. The API presents it as `option_ids`. A join table rather than an id array keeps the foreign keys real, and it answers "which SKUs use this option", which is the question SKU dynamism asks (see the notes below).
 
-Stock is **not** a column here. See SkuStock below.
+Stock is **not** a column here. See "SKU stock" below.
 
 Notes:
 
-- The end user cannot edit a SKU.
+- The end user cannot edit an SKU.
 - SKUs are dynamic: if the shop removes an attribute option, the SKUs that used it are deleted, not archived. No endpoint removes an option in this build, so the rule is latent, but the boundary already absorbs it. `POST /v1/skus:batchGet` returns the missing ids so `cart` can fail the affected lines, and an accepted order needs nothing from the row because `order_sku` is the crystallised copy (ADR-0004).
-- Deletion never frees a code. Once the product has been live, the dead SKU's allocation stands, whether the SKU was deleted directly or by cascade, so external artefacts such as labels and spreadsheets never see a code point at different goods (ADR-0026, see SkuCode below).
+- Deletion never frees a code. Once the product has been live, the dead SKU's allocation stands, whether the SKU was deleted directly or by cascade, so external artefacts such as labels and spreadsheets never see a code point at different goods (ADR-0026, see "SKU codes" below).
 
-### SKU code allocation
+### SKU codes
 
-The allocation of a code to a shop, and the single answer to the question "is this code taken?". The code string lives here, not on the SKU row (ADR-0026).
+The seller supplies the SKU code: `code` is required on `POST /v1/skus`, and the server never generates or composes one (ADR-0023). A code's value is its stability in the external world, on shipping labels, in inventory software and on listings on other channels, so the seller owns its shape. A shared prefix across a product family costs nothing, because the server never parses a code.
+
+The code lives on its allocation, not on the SKU row. An allocation assigns a code to a shop, and it is the single answer to the question "is this code taken?" (ADR-0026).
 
 - `sku_codes`: `id`, `shop_id`, `code`, `created_at`, `updated_at`. `(shop_id, code)` is unique.
 
-`id` is an integer, and this is the one table that does not take a UUIDv7. An allocation is an internal construct rather than an entity: it never appears on the wire, and `Sku.sku_code_id` is the only thing that ever references it (ADR-0026, ADR-0024).
+`id` is an integer rather than a UUIDv7. An allocation is an internal construct rather than an entity: it never appears on the wire, and `Sku.sku_code_id` is the only thing that ever references it (ADR-0026, ADR-0024).
 
-Creating a SKU claims its code by inserting the allocation, and a conflict on that insert is the per-shop uniqueness failure behind the 409 on `POST /v1/skus`. While the product has never been live, an allocation can change or be released: a pre-live edit updates it in place, and deleting a never-live SKU deletes it. From the product's first go-live the allocation is permanent, and deleting the SKU leaves it standing.
+Creating an SKU claims its code by inserting the allocation. A conflict on that insert is the per-shop uniqueness failure, and `POST /v1/skus` returns a 409 naming the existing code. Code uniqueness cannot enforce one SKU per option combination, because a custom code is not a function of the combination; that invariant has its own constraint on the sorted option set (ADR-0023).
+
+While the product has never been live, the seller can change an SKU code, and the edit updates the allocation in place. Deleting a never-live SKU deletes its allocation. Once the product goes live, every code freezes: a change means deleting and rebuilding the SKU, and the allocation stands even after its SKU is deleted. Today the `incomplete` status implements "has never been live", because nothing returns a product to `incomplete` (ADR-0023, ADR-0026).
 
 ### SKU stock
 
@@ -114,14 +118,6 @@ Country and region rules are optional, which rules out a clean composite key. `i
 
 When more than one rule matches a destination, the most specific rule wins: a region rule beats a country rule. The quote endpoint is opaque to its callers, so this resolution rule lives entirely in `product`.
 
-## SKU codes
-
-The seller supplies the SKU code: `code` is required on `POST /v1/skus`, and the server never generates or composes one (ADR-0023). A code's value is its stability in the external world, on shipping labels, in inventory software and on listings on other channels, so the seller owns its shape. A shared prefix across a product family costs nothing, because the server never parses a code.
-
-SKU codes are unique per shop, which the allocation's `(shop_id, code)` constraint enforces (ADR-0026, see SkuCode above). A duplicate returns a 409 naming the existing code. Code uniqueness cannot enforce one SKU per option combination, because a custom code is not a function of the combination; that invariant has its own constraint on the sorted option set (ADR-0023).
-
-While a product has never been live, the seller can change an SKU code, and the edit updates the allocation in place. Once the product goes live, every code freezes, and a change means deleting and rebuilding the SKU. Today the `incomplete` status implements "has never been live", because nothing returns a product to `incomplete` (ADR-0023).
-
 ## Tax
 
 One tax type, no rates and no logic. Tax is out of scope. Do not model tax tables.
@@ -141,7 +137,7 @@ One tax type, no rates and no logic. Tax is out of scope. Do not model tax table
 
 - `POST /v1/products` and `PATCH /v1/products/{id}`: create and update a product, including a validated status transition.
 - `POST /v1/products/{id}/attributes`: add an attribute with its options.
-- `POST /v1/skus`: create a SKU from a combination of options, with a required `code` and an initial `available_quantity`.
+- `POST /v1/skus`: create an SKU from a combination of options, with a required `code` and an initial `available_quantity`.
 - `GET /v1/labels` and `POST /v1/labels`: list the canonical labels, and create one with optional aliases.
 
 The contract holds nothing else. Deletion, option removal, later stock corrections and shipping-rule management have no endpoint in this build; seed data writes the `shipping_rules` rows directly.
@@ -159,7 +155,7 @@ The contract holds nothing else. Deletion, option removal, later stock correctio
 
 `product` owns its own Postgres database. The suggested tables mirror the model above: `products`, `product_status_history`, `attributes`, `attribute_options`, `skus`, `sku_codes`, `sku_stock`, `sku_options`, `labels`, `label_aliases`, `product_labels`, `shipping_rules`, and `processed_events` for idempotency. Every entity id is a UUIDv7 that the service mints, on a `uuid` column with a `DEFAULT uuidv7()` for the seed data that writes `shipping_rules` directly (ADR-0024).
 
-`sku_stock` is separate from `skus` on purpose. See SkuStock above for the reason.
+`sku_stock` is separate from `skus` on purpose. See "SKU stock" above for the reason.
 
 An amount and its currency are one value, and a read hands the pair to the application as one column (ADR-0032). One composite type serves every such read:
 
