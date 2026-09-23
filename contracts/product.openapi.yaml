@@ -10,8 +10,8 @@ info:
     domain. Money is an object of a decimal string and an ISO-4217 currency,
     which is one value (ADR-0017, ADR-0032).
 servers:
-  - url: http://product.internal/v1
-    description: In-cluster base URL
+  - url: http://product:8080/v1
+    description: Base URL on the Compose network, where `product` is the service name
 security:
   - internalBearer: []
 tags:
@@ -241,7 +241,7 @@ components:
     internalBearer:
       type: http
       scheme: bearer
-      description: Shared in-cluster bearer token. No mTLS in this build (ADR-0008).
+      description: Bearer token for service-to-service authentication.
 
   schemas:
     Amount:

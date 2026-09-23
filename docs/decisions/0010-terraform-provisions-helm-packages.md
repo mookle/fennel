@@ -1,6 +1,6 @@
 # 0010 - Infrastructure as code: Terraform provisions, and Helm packages
 
-Status: Accepted
+Status: Superseded by ADR-0033
 
 ## Context
 

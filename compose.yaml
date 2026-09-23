@@ -1,0 +1,33 @@
+# The whole Fennel stack (ADR-0033). Each service gets its own Postgres
+# container and its own named volume, so no service can reach another
+# service's data (ADR-0002). RabbitMQ joins as one service when cart and
+# order arrive (ADR-0006).
+
+name: fennel
+
+services:
+  product-db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: product
+      POSTGRES_USER: product
+      POSTGRES_PASSWORD: product
+    ports:
+      # Published so the migrations and the store tests reach the
+      # database from the host. Loopback only, so nothing off the host
+      # reaches it. The host port avoids 5432, which a local Postgres
+      # usually holds, and each service takes its own.
+      - "127.0.0.1:54321:5432"
+    volumes:
+      # Postgres 18 stores the data in a major-version subdirectory, so the
+      # mount sits at the parent and pg_upgrade never crosses a mount point.
+      - product-db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U product -d product"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  product-db-data:

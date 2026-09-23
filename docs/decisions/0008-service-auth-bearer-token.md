@@ -1,6 +1,6 @@
 # 0008 - Service-to-service auth through a shared bearer token
 
-Status: Accepted
+Status: Accepted (amended by ADR-0033)
 
 ## Context
 

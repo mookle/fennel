@@ -1,6 +1,6 @@
 # 0009 - Cloud platform: GCP is the cloud target, and kind runs locally
 
-Status: Accepted
+Status: Superseded by ADR-0033
 
 ## Context
 

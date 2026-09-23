@@ -78,7 +78,7 @@ These govern the relationships between components: what each service owns, and w
 - **Stock decrements only on `order.accepted`**, which is the moment a shop commits, not the moment a buyer submits. There is no reservation and no hold. This build accepts the oversell (ADR-0005).
 - **The test doubles for the product API come from `contracts/product.openapi.yaml`**, never from a hand-written payload (ADR-0015).
 - **Synchronous reads go over REST and OpenAPI**, not gRPC. **Asynchronous messages go over RabbitMQ.** Delivery is **at-least-once, with idempotent, deduped consumers** (ADR-0003, ADR-0006).
-- **Service-to-service auth** is a shared bearer token inside the cluster. There is no mTLS (ADR-0008).
+- **Service-to-service auth.** Each service identifies itself via a bearer token (ADR-0008, ADR-0033).
 
 ## Data conventions
 
@@ -91,7 +91,7 @@ These govern the representation of values: what a column's type is, and what a f
 
 ## Deployment target
 
-Local first on **kind**, which is the default smoke-test environment. **GCP** is the cloud target, with GKE and Artifact Registry. Postgres runs in the cluster for dev, and Cloud SQL is a prod-only upgrade. Destroy the stack when it is idle (ADR-0009). **Terraform** provisions the cloud infrastructure, and **Helm** packages the services, with one chart per deployable (ADR-0010).
+**Docker Compose** runs the stack, and it is the only environment this build targets. There is no cloud target, no Kubernetes, no Terraform and no Helm (ADR-0033). `compose.yaml` at the repository root defines the stack. Each service gets its own Postgres container and its own named volume, at Postgres 18 or later, which `uuidv7()` needs (ADR-0002, ADR-0024). RabbitMQ joins as one Compose service when `cart` and `order` arrive (ADR-0006).
 
 ## Version control
 

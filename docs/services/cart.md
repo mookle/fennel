@@ -31,7 +31,7 @@ Purchase is also where intent becomes a record. Unlike the cart that produced it
 ## Memory-first lifecycle (ADR-0012)
 
 - One process holds each active cart (`Registry` plus `DynamicSupervisor`). The state lives in the process.
-- Snapshots flush to Postgres on **idle timeout** (about 15 minutes) and on **graceful drain**. The drain traps SIGTERM, so a Kubernetes deploy does not lose carts. Submission deletes the row instead of flushing it (ADR-0022).
+- Snapshots flush to Postgres on **idle timeout** (about 15 minutes) and on **graceful drain**. The drain traps SIGTERM, so a container restart does not lose carts. Submission deletes the row instead of flushing it (ADR-0022).
 - If a process misses on access, it rehydrates from the last snapshot. A miss with no snapshot mints a fresh cart, which is also the path after submission.
 - A cart is **abandoned** when its `updated_at` is older than 48 hours (configurable). Nothing stores that status. It is derived wherever it is read, and a new write revives the cart because the write resets the age (ADR-0021, ADR-0022). Abandoned rows linger until an out-of-band process removes them, which this build defers.
 - A crash between flushes loses the recent edits. This build accepts that.

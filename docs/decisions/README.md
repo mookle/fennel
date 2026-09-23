@@ -19,9 +19,9 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0005](0005-stock-decrement-via-event.md) | Stock decrement via event | Accepted |
 | [0006](0006-event-broker-rabbitmq.md) | Event broker: RabbitMQ | Accepted |
 | [0007](0007-shipping-in-product-domain.md) | The product domain computes shipping, and orders treat it as opaque | Accepted |
-| [0008](0008-service-auth-bearer-token.md) | Service-to-service auth through a shared bearer token | Accepted |
-| [0009](0009-gcp-cloud-target-kind-locally.md) | Cloud platform: GCP is the cloud target, and kind runs locally | Accepted |
-| [0010](0010-terraform-provisions-helm-packages.md) | Infrastructure as code: Terraform provisions, and Helm packages | Accepted |
+| [0008](0008-service-auth-bearer-token.md) | Service-to-service auth through a shared bearer token | Accepted (amended by ADR-0033) |
+| [0009](0009-gcp-cloud-target-kind-locally.md) | Cloud platform: GCP is the cloud target, and kind runs locally | Superseded by ADR-0033 |
+| [0010](0010-terraform-provisions-helm-packages.md) | Infrastructure as code: Terraform provisions, and Helm packages | Superseded by ADR-0033 |
 | [0011](0011-one-cart-many-orders.md) | One cart can create many orders | Accepted |
 | [0012](0012-cart-memory-first.md) | Cart is memory first | Accepted (amended by ADR-0022) |
 | [0013](0013-buyer-intent-seller-obligation.md) | Buyer intent ends at purchase; seller obligation begins at order | Accepted |
@@ -44,3 +44,4 @@ When a decision changes, write a new ADR. Amend the Status line of the old one, 
 | [0030](0030-currency-must-hold-iso-4217-code.md) | Currency must hold an ISO 4217 currency code | Accepted |
 | [0031](0031-absent-amount-is-a-separate-type.md) | An absent amount is a separate type | Accepted |
 | [0032](0032-amount-and-currency-are-one-value.md) | An amount and its currency are one value | Accepted |
+| [0033](0033-docker-compose-is-the-only-environment.md) | Docker Compose is the only environment | Accepted |

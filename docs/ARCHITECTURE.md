@@ -88,15 +88,7 @@ See `contracts/product.openapi.yaml` for the REST contract and `contracts/events
 ├── contracts/                  # source of truth for cross-service wire formats
 │   ├── product.openapi.yaml
 │   └── events.md               # JSON Schemas per event
-├── infra/
-│   ├── terraform/              # cluster and cloud resources, per env
-│   │   ├── modules/
-│   │   └── envs/{dev,prod}/
-│   └── helm/                   # one chart per deployable
-│       ├── product/
-│       ├── cart/
-│       ├── order/
-│       └── rabbitmq/           # or a charted dependency
+├── compose.yaml                # the whole stack: services, databases, broker
 └── docs/
     ├── ARCHITECTURE.md         # this file
     ├── services/
@@ -107,13 +99,13 @@ See `contracts/product.openapi.yaml` for the REST contract and `contracts/events
     └── decisions/              # ADRs
 ```
 
-## Deployment (ADR-0009, ADR-0010)
+## Deployment (ADR-0033)
 
-- **Local first**: a **kind** cluster is the default smoke-test environment. It runs the same Helm charts, with Postgres and RabbitMQ in the cluster.
-- **GCP** is the cloud target. **Terraform** provisions GKE (Autopilot, or zonal with spot nodes), Artifact Registry, and the networking. Destroy the stack when it is idle.
-- **Helm** packages each service for the cluster. There is one chart per deployable, plus one for the broker.
-- Each service owns its **own Postgres database**, at version 18 or later, which the `uuidv7()` default on every id column needs (ADR-0024). The databases run in the cluster for dev, and Cloud SQL is a prod-only upgrade. No service reaches another service's database.
-- CI builds one container image per service. CI also runs contract tests against `contracts/` before it deploys. The tests validate the OpenAPI examples against their own schemas. They check that the handlers in `product` return schema-conforming responses. They also derive the test doubles for `cart` from those examples instead of from hand-written payloads (ADR-0015).
+- **Docker Compose** runs the stack, and it is the only environment this build targets. There is no cloud target, no Kubernetes, no Terraform and no Helm. `compose.yaml` at the repository root defines every container and the network between them.
+- Each service owns its **own Postgres container** and its own named volume, at Postgres 18 or later, which the `uuidv7()` default on every id column needs (ADR-0024). No service reaches another service's database, and the container boundary enforces it (ADR-0002).
+- **RabbitMQ** is one Compose service, which arrives with `cart` and `order` (ADR-0006).
+- A service reaches another service by its Compose service name, and a bearer token guards the call (ADR-0008, ADR-0033).
+- CI builds one container image per service. CI also runs contract tests against `contracts/`. The tests validate the OpenAPI examples against their own schemas. They check that the handlers in `product` return schema-conforming responses. They also derive the test doubles for `cart` from those examples instead of from hand-written payloads (ADR-0015).
 
 ## Data conventions
 
