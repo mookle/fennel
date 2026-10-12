@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // Store reads the catalogue from Postgres.
@@ -32,6 +33,11 @@ type Filter struct {
 	// means active, because the public catalogue query returns active
 	// products only, so no zero-value filter can leak a hidden product.
 	Status Status
+
+	// Query is free-text that matches independently against product
+	// description and name, ignoring case. An empty value matches every
+	// product.
+	Query string
 
 	// Page counts from one, and PageSize takes the contract's default of 20
 	// and its maximum of 100. The handler validates a request before it
@@ -85,7 +91,8 @@ const productsMatch = `
    AND ($2::text IS NULL OR p.shop_id = $2)
    AND ($3::text IS NULL OR EXISTS (
          SELECT 1 FROM product_labels pl JOIN labels l ON l.id = pl.label_id
-          WHERE pl.product_id = p.id AND l.slug = $3))`
+          WHERE pl.product_id = p.id AND l.slug = $3))
+   AND ($4::text IS NULL OR (p.description ILIKE '%' || $4 || '%' OR p.name ILIKE '%' || $4 || '%'))`
 
 // productsQuery reads one page of the catalogue and its total in one pass.
 //
@@ -115,11 +122,16 @@ SELECT p.id, p.shop_id, p.name, p.description,
        p.created_at, p.updated_at,
        COUNT(*) OVER () AS total` + productsMatch + `
  ORDER BY p.created_at DESC, p.id DESC
- LIMIT $4 OFFSET $5`
+ LIMIT $5 OFFSET $6`
 
 // productsCountQuery counts the matches on its own. Products runs it only
 // when a page past the first comes back empty.
 const productsCountQuery = `SELECT COUNT(*)` + productsMatch
+
+// likeEscaper makes a free-text query match itself literally under ILIKE, so
+// a % or _ in the query does not act as a wildcard. Backslash is the default
+// escape character for ILIKE, so it escapes itself first.
+var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 
 // Products returns one page of the catalogue and the number of products the
 // filter matched, which is the contract's total and not the length of the
@@ -131,10 +143,11 @@ func (s *Store) Products(ctx context.Context, f Filter) (Page, error) {
 	status := string(f.Status)
 	shopID := sql.NullString{String: f.ShopID, Valid: f.ShopID != ""}
 	label := sql.NullString{String: f.Label, Valid: f.Label != ""}
+	query := sql.NullString{String: likeEscaper.Replace(f.Query), Valid: f.Query != ""}
 	offset := (f.Page - 1) * f.PageSize
 
 	rows, err := s.db.QueryContext(ctx, productsQuery,
-		status, shopID, label, f.PageSize, offset)
+		status, shopID, label, query, f.PageSize, offset)
 	if err != nil {
 		return Page{}, fmt.Errorf("catalogue: query products: %w", err)
 	}
@@ -175,7 +188,7 @@ func (s *Store) Products(ctx context.Context, f Filter) (Page, error) {
 	// An empty later page may sit past the end of a non-empty match.
 	if len(products) == 0 && offset > 0 {
 		if err := s.db.QueryRowContext(ctx, productsCountQuery,
-			status, shopID, label).Scan(&total); err != nil {
+			status, shopID, label, query).Scan(&total); err != nil {
 			return Page{}, fmt.Errorf("catalogue: count products: %w", err)
 		}
 	}

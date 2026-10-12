@@ -191,6 +191,70 @@ func TestProductsFilters(t *testing.T) {
 			want:  []string{},
 			total: 0,
 		},
+		{
+			// "ring" appears in the copper ring's name and in no description.
+			name:  "query matches a name",
+			f:     Filter{Query: "ring"},
+			want:  []string{copperRing},
+			total: 1,
+		},
+		{
+			// "flax" appears in the linen apron's description and in no name.
+			name:  "query matches a description",
+			f:     Filter{Query: "flax"},
+			want:  []string{linenApron},
+			total: 1,
+		},
+		{
+			name:  "query ignores case",
+			f:     Filter{Query: "LINEN"},
+			want:  []string{linenApron},
+			total: 1,
+		},
+		{
+			// Every description starts with "A ", so a one-letter query
+			// matches the whole active catalogue.
+			name:  "query matches a substring",
+			f:     Filter{Query: "a"},
+			want:  []string{slateCoaster, oakSpoon, linenApron, copperRing},
+			total: 4,
+		},
+		{
+			// The beeswax candle matches, but it is hidden.
+			name:  "query keeps to the status",
+			f:     Filter{Query: "beeswax"},
+			want:  []string{},
+			total: 0,
+		},
+		{
+			name:  "query and status narrow together",
+			f:     Filter{Query: "beeswax", Status: StatusHidden},
+			want:  []string{beeswaxCandle},
+			total: 1,
+		},
+		{
+			// "a" matches the whole active catalogue, so the shop alone
+			// removes the bramble products.
+			name:  "query and shop_id narrow together",
+			f:     Filter{Query: "a", ShopID: "shop-thistle"},
+			want:  []string{linenApron, copperRing},
+			total: 2,
+		},
+		{
+			// No name or description holds a percent sign. Unescaped, the
+			// query would be a wildcard and match every product.
+			name:  "query escapes the percent sign",
+			f:     Filter{Query: "%"},
+			want:  []string{},
+			total: 0,
+		},
+		{
+			// Unescaped, an underscore matches any one character.
+			name:  "query escapes the underscore",
+			f:     Filter{Query: "_"},
+			want:  []string{},
+			total: 0,
+		},
 	}
 
 	for _, c := range cases {
@@ -333,6 +397,19 @@ func TestProductsPaginates(t *testing.T) {
 	}
 	if past.Total != 4 {
 		t.Errorf("total = %d, want 4", past.Total)
+	}
+
+	// The fallback count filters as the page does, so a page past the end
+	// of a query still reports the query's total.
+	pastQuery, err := store.Products(t.Context(), Filter{Query: "apron", Page: 2, PageSize: 1})
+	if err != nil {
+		t.Fatalf("Products(query, page 2): %v", err)
+	}
+	if len(pastQuery.Products) != 0 {
+		t.Errorf("page 2 of 1 gave %v, want empty", ids(pastQuery.Products))
+	}
+	if pastQuery.Total != 1 {
+		t.Errorf("total = %d, want 1", pastQuery.Total)
 	}
 }
 
