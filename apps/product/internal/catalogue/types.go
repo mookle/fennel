@@ -80,7 +80,7 @@ type Sku struct {
 	UpdatedAt         time.Time
 }
 
-// ResolvedSku is a denormalised read model for wire transmission.
+// ResolvedSku is a denormalised read model of an SKU.
 //
 // It is the SKU row joined with its product's name, description and shop_id,
 // the resolved option names, and the stock. Denormalising the data means a

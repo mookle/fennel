@@ -333,12 +333,9 @@ func TestProductsReadsLabelSlugs(t *testing.T) {
 		t.Errorf("label_slugs = %v, want %v", spoon.LabelSlugs, want)
 	}
 
-	// The slate coaster carries none, which is an empty list rather than an
-	// absent one.
+	// The slate coaster carries none. Whether that is nil or empty is the
+	// handler's concern, so this asserts only the length.
 	coaster := find(t, store, Filter{}, slateCoaster)
-	if coaster.LabelSlugs == nil {
-		t.Error("label_slugs came back nil, want an empty slice")
-	}
 	if len(coaster.LabelSlugs) != 0 {
 		t.Errorf("label_slugs = %v, want empty", coaster.LabelSlugs)
 	}

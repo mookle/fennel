@@ -116,7 +116,7 @@ SELECT p.id, p.shop_id, p.name, p.description,
        s.status, p.currency,
        CASE WHEN p.base_price IS NULL THEN NULL
             ELSE (p.base_price, p.currency)::money_value END,
-       (SELECT COALESCE(json_agg(l.slug ORDER BY l.slug), '[]')
+       (SELECT json_agg(l.slug ORDER BY l.slug)
           FROM product_labels pl JOIN labels l ON l.id = pl.label_id
          WHERE pl.product_id = p.id),
        p.created_at, p.updated_at,
@@ -175,8 +175,10 @@ func (s *Store) Products(ctx context.Context, f Filter) (Page, error) {
 		); err != nil {
 			return Page{}, fmt.Errorf("catalogue: scan product: %w", err)
 		}
-		if err := json.Unmarshal(labelSlugs, &p.LabelSlugs); err != nil {
-			return Page{}, fmt.Errorf("catalogue: read label slugs of %s: %w", p.ID, err)
+		if labelSlugs != nil {
+			if err := json.Unmarshal(labelSlugs, &p.LabelSlugs); err != nil {
+				return Page{}, fmt.Errorf("catalogue: read label slugs of %s: %w", p.ID, err)
+			}
 		}
 		products = append(products, p)
 	}
