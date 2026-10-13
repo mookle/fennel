@@ -1,0 +1,7 @@
+# The build needs the Go sources and the migrations, and nothing that only
+# the tests read.
+**/*_test.go
+**/testdata
+Dockerfile
+.dockerignore
+README.md

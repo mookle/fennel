@@ -6,6 +6,24 @@
 name: fennel
 
 services:
+  product:
+    build: ./apps/product
+    environment:
+      FENNEL_PRODUCT_DSN: postgres://product:product@product-db:5432/product
+      # One token per caller (ADR-0033). The part of the name after
+      # FENNEL_PRODUCT_TOKEN_ names the caller. These values are for local
+      # use only. cart takes its token when it joins the stack, and dev is
+      # for calling product by hand.
+      FENNEL_PRODUCT_TOKEN_DEV: dev-token
+    ports:
+      # Loopback only, as for the database.
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      # product migrates its database on start, so it waits until Postgres
+      # accepts connections.
+      product-db:
+        condition: service_healthy
+
   product-db:
     image: postgres:18
     environment:

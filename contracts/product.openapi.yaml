@@ -51,6 +51,7 @@ paths:
                   total: { type: integer }
               examples:
                 default: { $ref: '#/components/examples/ProductPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     post:
       tags: [products]
       summary: Create a product
@@ -66,6 +67,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Product' }
         '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /products/{id}:
     parameters:
@@ -81,6 +83,7 @@ paths:
               schema: { $ref: '#/components/schemas/ProductDetail' }
               examples:
                 default: { $ref: '#/components/examples/ProductDetailExample' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
     patch:
       tags: [products]
@@ -96,6 +99,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Product' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422':
           description: The business rules reject the change, for example a status transition that is not allowed from the current status
@@ -121,6 +125,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Attribute' }
         '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /skus:
     post:
@@ -138,6 +143,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Sku' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '409': { $ref: '#/components/responses/Conflict' }
 
   /skus/{id}:
@@ -154,6 +160,7 @@ paths:
               schema: { $ref: '#/components/schemas/ResolvedSku' }
               examples:
                 default: { $ref: '#/components/examples/ResolvedSkuSingle' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /skus:batchGet:
@@ -184,6 +191,7 @@ paths:
                   missing: { type: array, items: { type: string, format: uuid } }
               examples:
                 default: { $ref: '#/components/examples/SkuBatch' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /shipping/quote:
     post:
@@ -205,6 +213,7 @@ paths:
               schema: { $ref: '#/components/schemas/ShippingQuoteResponse' }
               examples:
                 default: { $ref: '#/components/examples/ShippingQuote' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '422':
           description: One or more lines cannot ship to the destination
           content:
@@ -221,6 +230,7 @@ paths:
           content:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/Label' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
     post:
       tags: [labels]
       summary: Create a label (optionally with aliases)
@@ -235,13 +245,14 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Label' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
 components:
   securitySchemes:
     internalBearer:
       type: http
       scheme: bearer
-      description: Bearer token for service-to-service authentication.
+      description: Bearer token for service-to-service authentication. Each caller holds a token of its own (ADR-0033).
 
   schemas:
     Amount:
@@ -564,6 +575,12 @@ components:
   responses:
     BadRequest:
       description: Invalid request
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unauthorized:
+      description: >
+        The request carries no bearer token, or one that belongs to no
+        accepted caller. Each caller holds a token of its own (ADR-0033). The
+        response carries a WWW-Authenticate header of Bearer.
       content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
     NotFound:
       description: Not found

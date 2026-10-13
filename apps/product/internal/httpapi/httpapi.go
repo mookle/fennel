@@ -31,6 +31,7 @@ type errorJSON struct {
 // so these are this service's own.
 const (
 	codeInvalidRequest = "invalid_request"
+	codeUnauthorized   = "unauthorized"
 	codeInternal       = "internal"
 )
 

@@ -2,9 +2,29 @@
 
 The catalogue service, in Go. `docs/services/product.md` holds the design, and `contracts/product.openapi.yaml` holds the REST contract. Run every command below from `apps/product/` unless a step says otherwise.
 
+## Running the service
+
+Compose runs the service as `product`, and it listens on host port 8080, on loopback only (ADR-0033). From the repository root, start it with `docker compose up -d --build product`. Compose starts `product-db` first and waits until it is healthy.
+
+The service reads its configuration from the environment, once, at start. A changed value takes a restart.
+
+- `FENNEL_PRODUCT_DSN` points at the database. It is required.
+- `FENNEL_PRODUCT_ADDR` is the listen address. It defaults to `:8080`.
+- `FENNEL_PRODUCT_TOKEN_<CALLER>` holds the bearer token of one caller, and the rest of the name names the caller in lowercase. Each caller holds a token of its own (ADR-0033), and the service needs at least one. The start log lists the callers it accepts, and never the tokens.
+
+`compose.yaml` sets a `dev` caller for calls by hand:
+
+```sh
+curl -s -H 'Authorization: Bearer dev-token' 'localhost:8080/v1/products?page_size=2'
+```
+
+A request without an accepted token gets a 401.
+
 ## Database
 
 Compose runs the service's Postgres as `product-db` (ADR-0033). It listens on host port 54321, on loopback only, and the user, password and database are all `product`.
+
+The binary embeds the migrations and applies them before it serves, so `docker compose up` brings a fresh volume up to date. To apply them without the service:
 
 1. From the repository root, start the database with `docker compose up -d product-db`.
 2. Apply the migrations with `goose -dir migrations postgres "postgres://product:product@localhost:54321/product" up`.
