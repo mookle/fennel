@@ -16,13 +16,14 @@ Three domains, one deployable each:
 
 The pipeline starts at adding a product to the cart and ends at order acceptance. Invoicing, payment, and fulfilment are out-of-scope.
 
-## Start here (suggested reading order)
+## Start here
 
-1. **`CLAUDE.md`**. The conventions, and the load-bearing invariants a build must not violate. Read this before you write anything.
+1. **`CLAUDE.md`**. Designed for AI agents, but a useful summary for all. Contains conventions, load-bearing invariants a build must not violate, and guidance on how to interact with the project. Agents **must** read this first.
 2. **`docs/ARCHITECTURE.md`**. The canonical design: domains, service boundaries, domain language, the diagram, deployment, and data conventions.
-3. **`docs/decisions/README.md`**. The index of ADRs that record every meaningful decision. Read the ones relevant to the task at hand.
-4. **`docs/services/product.md`**, **`docs/services/cart.md`** and **`docs/services/order.md`**. The per-service design docs.
-5. **`contracts/`**. The wire contracts the services build against: `product.openapi.yaml` for synchronous REST, and `events.md` for the asynchronous events with their JSON Schemas.
-6. **`roadmap/`**. The breakdown of work remaining: `README.md` is the priority-ordered index of tasks and objectives, linking out to documents in `tasks/*` where more detail is needed.
+3. **`docs/services/product.md`**, **`docs/services/cart.md`** and **`docs/services/order.md`**. The per-service design docs.
+4. **`contracts/`**. The wire contracts the services build against: `product.openapi.yaml` for synchronous REST, and `events.md` for the asynchronous events with their JSON Schemas.
+5. **`docs/decisions/README.md`**. The index of the architectural decision records (ADRs) and the rules around their creation.
+6. **`roadmap.md`**. A working document / scratchpad for co-ordinating ongoing work between authors.
+7. **`docs/AUTHORING.md`.** The authoring style guide, relevant when writing prose.
 
-The documentation in `docs/original-spec-notes.md` can be ignored. It is a historical reference to the original technical spec that contains notes out-of-scope for this build, and can be ignored during development.
+The documentation in `docs/original-spec-notes.md` can be ignored during feature development. It is a historical reference to the original technical spec that contains notes out-of-scope for this build.

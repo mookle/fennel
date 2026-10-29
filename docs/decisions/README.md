@@ -1,14 +1,23 @@
 # Architecture Decision Records
 
-The big decisions for Fennel. The format is lightweight MADR: Status, Context, Decision, Consequences.
+A repository of decisions whose outcomes are foundational and/or will likely have meaningful second-order effects elsewhere in the system. Not every choice and implementation detail should be recorded here - the more local, and less coupled a decision is, the less likely it is to need an ADR.
 
-A superseded ADR stays in the tree. It records the reasoning and the rejected alternatives, and both stay useful when someone picks up the deferred work. The number is the stable reference. A cross-reference uses `ADR-NNNN`, never a filename. A slug tracks the current title, so a retitled ADR gets a new filename and a new link in this table.
+## Workflow
 
-**An ADR records one decision at one moment, and later work never edits it.** A cross-reference points backwards, to a record that already existed. The one forward pointer is the Status line, which names whatever superseded or amended this decision, and this table repeats it. Nothing else in the body points forward.
+Add a new file under `docs/decisions/` in the format `XXXX-title-slug.md`, where `XXXX` is the next free number, zero-padded. Use a lightweight MADR format: Status, Context, Decision, Consequences. Add an index row in `docs/decisions/README.md`. Update any live documents the new decision touches. 
 
-**A fact belongs in an ADR only if the decision rests on it.** Cite the record that owns the fact and move on. Never restate another ADR's rule, because two copies of one rule drift apart. Never report what later happened to this decision, because that is the job of the record that changed it.
+## Authoring rules
 
-When a decision changes, write a new ADR. Amend the Status line of the old one, and leave its body alone.
+- **The substance of an ADR is immutable.** If a decision changes, write a new ADR. Update the status of the old ADR to refer to the record that amended or superseded it.
+- **Refer to another ADR using `ADR-XXXX`.** Never a title or filename.
+- **An ADR records one decision at one moment.** Beyond its status line, an ADR should contain no forward pointers. A cross-reference points backwards, to a record that already existed.
+- **Never restate another ADR.** Two copies of the same rule will drift apart. Use a reference instead.
+- **Only refer to another ADR if the decision at hand rests on it.** An ADR should build a case for a specific decision, not cross-reference all connected records. Cite the record that owns the fact and move on.
+- **A superseded ADR stays in the tree.** There is value in recording rejected alternatives.
+- **Keep the index in sync.** Update the index whenever an ADR is added, a status changes, or when a filename or title has been updated.
+- **Do not re-open an accepted decision casually.** The ADRs hold the reasoning and the rejected alternatives. Read the relevant one before you propose a change.
+
+## Index
 
 | ADR | Title | Status |
 |---|---|---|

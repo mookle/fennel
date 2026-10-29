@@ -8,48 +8,11 @@ The operating guide for any agent that works in this repository.
 
 ## Prime directives
 
-- **The documents are the source of truth.** When your intuition and a doc disagree, the doc wins. If a doc is wrong, incomplete, or silent on something load-bearing; raise it, get a decision, and record it as an ADR before you write code.
-- **Every big decision gets an ADR.** Add a new file under `docs/decisions/` with the next number, in MADR-lite form (Status, Context, Decision, Consequences) and add an index row in `docs/decisions/README.md`. Update the live documents the new decision touches.
-- **An ADR is a record, not a live document.** It states one decision at one moment. When a decision changes, write a new ADR, amend the Status line of the old one, and leave its body alone. An ADR cites only records that already existed when it was written, and the Status line holds the only forward pointer. `docs/decisions/README.md` states the full rule.
-- **Do not re-open a settled decision casually.** The ADRs hold the reasoning and the rejected alternatives. Read the relevant one before you propose a change.
-
-## Authoring documentation 
-
-These rules apply to documentation, VCS-related text, error messages, release notes, and comments. It does not apply to code, identifiers, or command syntax.
-
-### Words
-
-- Use one name for one thing. Do not refer to the same item by two different names.
-- Give each word one meaning. "fall" means to move down, not to decrease.
-- No marketing adjectives: seamless, robust, powerful, cutting-edge, effortless, world-class, next-generation, revolutionary.
-- Use British English spelling. "colour" not "color", "fulfilment" not "fulfillment").
-- Use "an SKU" not "a SKU".
-- Don't use "mint" where "create" or "generate" has the same meaning.
-
-### Verbs
-
-- Active voice. "the parser reads the file", not "the file is read by the parser".
-- Use a verb for an action. "analyze the log", not "perform an analysis of the log".
-- No stacked auxiliaries. Not "it is important to note that this may help to improve". Write "this improves X".
-- No "-ing" main verb where a simple tense works.
-
-### Punctuation
-
-- No em dashes or en dashes. A spaced hyphen used as a dash is fine; this rule is about the glyph, not the construct.
-
-### Structure
-
-- One topic per paragraph, max six sentences. For steps, use a numbered vertical list, one action per item, imperative form. Put a condition before its command.
-- Do not hard-wrap prose. This does not apply to code comments.
-- Avoid run-on sentences where possible.
-
-## Conversation
-
-These rules apply to general chat conversation.
-
-- Write only the requested text. No preamble, no summary, no closing remarks.
-- Do not generate a recap unless explicitly asked to do so.
-- Resolve questions before acting. Even when given a list of actionable items, resolve remaining questions before executing any actions.
+- **Tests > code > documentation.** The efficacy of a design decision cannot be evaluated until it has been practised in code, and the code needs tests to be proved behaviourally correct. Building documentation ahead of time risks baking in assumptions, and wasting effort better spent exercising the real system. When working, provable code exists, then record the decisions behind it.
+- **Code is the source of truth.** If code and documentation disagree, the code is the representation that matters. Note that "truth" and "correct" are not the same thing - confirm the implementation is sound before taking action to close the gap. 
+- **Avoid restating documentation.** There are times where it makes sense to summarise content held elsewhere, but a single source of truth prevents drift and the resulting confusion. Use a reference where possible.
+- **Dead documentation is harmful.** It creates confusion and erodes the reader's trust. Documentation that frequently comes adrift from the implementation may be misplaced or poorly structured. Raise the issue for discussion should you encounter any such prose.
+- **Every big decision gets an ADR.** Read `docs/decisions/README.md` for the ADR authoring rules, important steps to take before proposing a new decision, and a definition of what constitutes "big".
 
 ## Naming rules
 
@@ -64,11 +27,11 @@ These rules apply to general chat conversation.
 
 ## Load-bearing invariants
 
-These govern the relationships between components: what each service owns, and which of them may talk to which. Every one cites the ADR that decided it, and the prime directives above say what it takes to change one.
+These govern the relationships between components: what each service owns, and which of them may talk to which.
 
 - **Three deployables**: `product` (Go), `cart` (Elixir), `order` (Elixir). No shared database. `shop_id` and `user_id` are opaque identifiers with no backing service (ADR-0002, ADR-0001).
 - **`cart` and `order` are separate Mix projects, not umbrella apps.** Neither may reference the other's modules. Each side duplicates the event envelope, and no library ever shares it (ADR-0014).
-- **One database per service.** No service queries another's database (ADR-0002, ADR-0009).
+- **One database per service.** No service queries another's database (ADR-0002).
 - **Cart reaches Order only through RabbitMQ**, on the `purchase.submitted` event (ADR-0013).
 - **Each side mints its own identifiers**: `cart` mints `purchase_id`, and `order` mints `order_id`. Neither names the other's resources. Only `purchase_id` crosses the boundary (ADR-0011).
 - **`order` owns the shop split.** Cart never encodes the per-shop rule (ADR-0011).
@@ -91,13 +54,14 @@ These govern the representation of values: what a column's type is, and what a f
 
 ## Deployment target
 
-**Docker Compose** runs the stack, and it is the only environment this build targets. There is no cloud target, no Kubernetes, no Terraform and no Helm (ADR-0033). `compose.yaml` at the repository root defines the stack. Each service gets its own Postgres container and its own named volume, at Postgres 18 or later, which `uuidv7()` needs (ADR-0002, ADR-0024). RabbitMQ joins as one Compose service when `cart` and `order` arrive (ADR-0006).
+Docker Compose only (ADR-0033).
 
 ## Version control
 
-- This is a **Jujutsu (`jj`) repo colocated with git**. The standard `git` commands work.
-- Commit or push **only when asked**. Branch off `main` first. Do not commit directly to `main`.
-- Keep authored text free of em dashes and hard wraps in a commit too, as above.
+- This is a Jujutsu (`jj`) repo colocated with git. The standard `git` commands work.
+- Use worktrees. Do not work in the main tree unless explicitly requested to do so.
+- Use a feature branch workflow. Branch off `main`, commit changes, and raise a PR when the feature is complete. Do not commit directly to `main`.
+- Read the style guidance in `docs/AUTHORING.md` before writing a commit message or PR description.
 
 ## Historical reference
 
@@ -105,4 +69,4 @@ These govern the representation of values: what a column's type is, and what a f
 
 ## Next steps
 
-Read `./README.md` for more context and the correct reading order of the documentation.
+Read `docs/AUTHORING.md` to understand the conventions you must follow when writing prose. Then read the main project `./README.md` for more context and detail.

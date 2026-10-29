@@ -1,6 +1,6 @@
 # Roadmap
 
-The priority-ordered index of work remaining. An item links to a document in `tasks/` when it needs more detail than one line.
+A working document / scratchpad for co-ordinating ongoing work between authors. Regardless of format, all work in this file **must** be priority-ordered.
 
 ## Objective: the demo flow runs end to end
 
