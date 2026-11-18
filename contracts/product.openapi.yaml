@@ -164,18 +164,20 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
 
   /skus:batchGet:
-    post:
+    get:
       tags: [catalogue]
       summary: Resolve many SKUs at once (cart/checkout)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [sku_ids]
-              properties:
-                sku_ids: { type: array, items: { type: string, format: uuid }, minItems: 1 }
+      description: >
+        Resolves each id in sku_ids. items holds the SKUs that exist, and
+        missing lists the requested ids that do not exist. A request with more
+        than 100 values, no values, or a value that is not a UUID returns 400.
+      parameters:
+        - name: sku_ids
+          in: query
+          required: true
+          style: form
+          explode: true
+          schema: { type: array, items: { type: string, format: uuid }, minItems: 1, maxItems: 100 }
       responses:
         '200':
           description: >
@@ -191,6 +193,7 @@ paths:
                   missing: { type: array, items: { type: string, format: uuid } }
               examples:
                 default: { $ref: '#/components/examples/SkuBatch' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
   /shipping/quote:

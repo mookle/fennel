@@ -17,6 +17,7 @@ import (
 func New(products productReader) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("GET /v1/products", listProducts{store: products})
+	mux.Handle("GET /v1/skus:batchGet", newBatchGetSkus())
 	return mux
 }
 

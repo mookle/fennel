@@ -1,0 +1,22 @@
+# Facts
+
+- Roadmap item 4 in `roadmap.md`. Items 5 (cart's token in `compose.yaml`) and 8 (cart calls this route on add) follow as separate tasks.
+- `apps/product/` is open to agents, `internal/catalogue/types.go` included. The user lifted the old hand-written-Go rule on 2026-11-18.
+- Decisions the user made for this task:
+  - The facade returns 400 for more than 100 values, for no values, and for any value that is not a UUID.
+  - The 400 status alone is enough. Follow the existing convention for the body (`writeError`, `codeInvalidRequest`), but no test checks it.
+  - The limit counts the values sent, duplicates included. A client that repeats an id wastes its own slot.
+  - POST on the path returns 405 through Go's router default behaviour: register only the GET.
+  - The two existing contract lint errors are fixed in this task, in their own commit, separate from the batchGet change.
+  - The technical writer updates the POST references in `docs/services/cart.md` (line 46) and `docs/services/product.md` (lines 76 and 135).
+- The two existing lint errors in `contracts/product.openapi.yaml`:
+  - Line 374: `code: { type: string, description: seller-supplied, unique per shop (ADR-0023) }`. The unquoted comma ends the description, so YAML reads "unique per shop (ADR-0023)" as a key. Quote the description.
+  - Line 412: `region_id: { type: string, nullable: true }`. `nullable` is OpenAPI 3.0. The 3.1 form is `type: [string, "null"]`.
+- Check the contract from the repository root with `docker run --rm -v "$PWD/contracts:/spec:ro" redocly/cli lint --extends=minimal /spec/product.openapi.yaml`. Warnings do not fail it.
+- Routes live in `apps/product/internal/httpapi/httpapi.go`. `RequireBearer` in `auth.go` wraps the whole mux in `cmd/product/main.go`, so the new route gets auth and the 401s without new code.
+- `github.com/google/uuid` is already a dependency. Use it to parse the ids. No new dependency is needed.
+- The `SkuBatch` example sits under `components.examples` in the contract. The Docker build context is `apps/product`, so the service cannot read the contract file at run time: copy the values into Go.
+- `price` on the wire is `{amount, currency}`, with the amount a string padded to four decimal places (ADR-0017, ADR-0032). The `money` package already marshals that shape.
+- `compose.yaml` configures the `dev` caller with `FENNEL_PRODUCT_TOKEN_DEV: dev-token`. `product` listens on `127.0.0.1:8080` on the host.
+- The acceptance test starts what it needs with `docker compose up -d --build product`, which also starts `product-db`, and polls until `product` answers. It must never run `docker compose down` or remove volumes.
+- `docs/AUTHORING.md` governs comments, contract descriptions, doc prose and commit messages.

@@ -43,7 +43,7 @@ Purchase is also where intent becomes a record. Unlike the cart that produced it
 
 Checkout is a stateless procedure, not a store. It is the move from intent to obligation, and it **ends at submission**. It does not split the cart into per-shop orders, and it mints no `order_id`. It commits one Purchase and announces it.
 
-1. Validate the cart. Call `POST /v1/skus:batchGet` on `product` to refresh the descriptive and price data, and to confirm that each SKU still exists.
+1. Validate the cart. Call `GET /v1/skus:batchGet` on `product` to refresh the descriptive and price data, and to confirm that each SKU still exists.
 2. Check the stock before submission. Confirm that `available_quantity >= quantity` for every line. This is a synchronous read with no hold. See the ADR-0005 scaling note on oversell.
 3. Get a shipping quote. Call `POST /v1/shipping/quote`, and group the lines by shop for the call. The returned costs are opaque (ADR-0007), and checkout records them per line. This grouping is for the quote only, not for order creation.
 4. Mint a `purchase_id`. In one transaction, persist the **Purchase** with the crystallised submitted lines, the address and the shipping costs, and delete the cart row (ADR-0022).
