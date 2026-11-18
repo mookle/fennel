@@ -11,11 +11,24 @@
 # Re-approval, run inside the task's worktree after you change the
 # definition: records the new hashes and commits them.
 #
-# Usage: scripts/approve.sh [task-name]   (defaults to .tasks/current)
+# Usage: scripts/approve.sh [--start] [task-name]   (defaults to .tasks/current)
+#   --start: on first approval, start the delivery lead in the new worktree.
+#            Re-approval ignores it.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 die() { echo "$1" >&2; exit 1; }
+
+start=0
+args=()
+for a in "$@"; do
+  case "$a" in
+    --start) start=1 ;;
+    -*) die "Unknown option: $a" ;;
+    *) args+=("$a") ;;
+  esac
+done
+set -- ${args[@]+"${args[@]}"}
 
 BASE_BRANCH="main"
 WORKTREE_ROOT=""
@@ -29,6 +42,8 @@ name="${1:-$(tr -d '[:space:]' < .tasks/current 2>/dev/null || true)}"
 dir=".tasks/$name"
 [ -d "$dir" ] || die "No such task: $dir"
 branch="task/$name"
+# Process commits carry the task number, for example [002].
+tag="[${name%%-*}]"
 
 if command -v sha256sum >/dev/null 2>&1; then sum="sha256sum"; else sum="shasum -a 256"; fi
 lock() { ( cd "$1" && $sum done.md facts.md checks.sh > LOCKED ); }
@@ -38,7 +53,7 @@ if [ "$(git branch --show-current)" = "$branch" ]; then
   lock "$dir"
   echo "$name" > .tasks/current
   git add "$dir" .tasks/current
-  git commit -q -m "Approve task $name" || true
+  git commit -q -m "$tag Approve task $name" || true
   echo "Locked $dir again. Tell the delivery lead to resume."
   exit 0
 fi
@@ -52,6 +67,10 @@ git rev-parse -q --verify "refs/heads/$branch" >/dev/null \
   && die "Branch $branch already exists. To re-approve, run this script inside the task's worktree."
 wt="$WORKTREE_ROOT/$name"
 [ -e "$wt" ] && die "$wt already exists."
+# Inside a Claude Code session (for example through !), exec would start a
+# session inside that session.
+[ "$start" = 1 ] && [ -n "${CLAUDECODE:-}" ] \
+  && die "--start does not work inside a Claude Code session. Run it from a terminal, or leave it out."
 
 lock "$dir"
 mkdir -p "$WORKTREE_ROOT"
@@ -68,7 +87,7 @@ echo "$name" > "$wt/.tasks/current"
 [ -f .claude/settings.local.json ] && cp .claude/settings.local.json "$wt/.claude/settings.local.json"
 
 git -C "$wt" add "$dir" .tasks/current
-git -C "$wt" commit -q -m "Approve task $name"
+git -C "$wt" commit -q -m "$tag Approve task $name"
 
 # The task now lives on its branch. Remove the draft from the main tree.
 rm -rf "${dir:?}"
@@ -85,9 +104,17 @@ Approved $name.
   Worktree: $wt
   Branch:   $branch (cut from $BASE_BRANCH)
 
+When the task is merged, remove the worktree with: git worktree remove "$wt"
+Accept the trust prompt for the new folder, or the role hooks will not run.
+MSG
+
+if [ "$start" = 1 ]; then
+  echo "Starting the delivery lead."
+  cd "$wt" && exec claude --agent delivery-lead
+fi
+
+cat <<MSG
+
 Start the pipeline with:
   cd "$wt" && claude --agent delivery-lead
-
-Accept the trust prompt for the new folder, or the role hooks will not run.
-When the task is merged, remove the worktree with: git worktree remove "$wt"
 MSG

@@ -21,7 +21,7 @@ Six agent roles plus you, named after the matching jobs on a real dev team. Ever
 | --- | --- | --- | --- | --- | --- |
 | You (engineering manager) | Approving `done.md`, answering blockers, merging the branch | Everything | `resolutions/`, final approval |  |  |
 | Product owner | Spec, `done.md`, facts, initial tier; works with you | Repo, your input | `done.md`, `facts.md`, `state.json` (tier) | Code, tests | Read, Grep, Glob, Write (task folder only) |
-| Delivery lead | Dispatching the next role, retries, tier step-ups, writing the review summary | Task folder | `state.json`, the final commit message | `done.md`, tests, code, blockers raised by other roles, `resolutions/` | Agent(listed roles), Read, Bash (git, gh) |
+| Delivery lead | Dispatching the next role, retries, tier step-ups, writing the summary commit | Task folder | `state.json`, the final commit message | `done.md`, tests, code, blockers raised by other roles, `resolutions/` | Agent(listed roles), Read, Bash (git, gh) |
 | Test engineer | Acceptance tests from `done.md`, written to fail first | `done.md`, `facts.md`, public interfaces | `tests/acceptance/` | Implementation (no reading it either) | Read, Grep, Glob, Write, Edit, Bash |
 | Developer | Implementation and unit tests until all checks pass | Task folder, repo | Source, unit tests | `done.md`, `tests/acceptance/` | Read, Grep, Glob, Write, Edit, Bash |
 | Reviewer | Test coverage of every outcome line, probing for gaps, ruling on judged criteria | Task folder, diff, repo | `findings.md`, `verdict.json` | Everything else | Read, Grep, Glob, Bash (read-only commands) |
@@ -35,12 +35,12 @@ The delivery lead may retry a step, re-route, or answer a question that `done.md
 
 The delivery lead dispatches each stage in order and routes on `verdict.json`: a code fault goes back to the developer, a test fault to the test engineer. Tier 1 skips the test engineer and technical writer; tier 0 is the developer alone.
 
-1. The product owner drafts `done.md` with you. Once you approve it with `scripts/approve.sh`, it locks, and the task moves into its own worktree, named after the task folder, on branch `task/<name>`. Every later stage runs there.
+1. The product owner drafts `done.md` with you. Once you approve it with `scripts/approve.sh`, it locks, and the task moves into its own worktree, named after the task folder, on branch `task/<name>`. Every later stage runs there. Pass `--start` to start the delivery lead in the new worktree. The delivery lead commits after each stage, with the task number as a prefix, for example `[002] Record review round 1: pass`.
 2. The test engineer writes acceptance tests that fail against the current code.
 3. The developer implements until every executable check passes.
 4. The reviewer checks coverage and the judged criteria, then writes a verdict.
 5. On a fail, the owner of each blocking finding fixes it and the reviewer runs again, up to three rounds.
-6. On a pass, the technical writer updates the docs. The delivery lead then makes a final commit whose message is the review summary, and a hook sends you that message as the notification. There is no pull request.
+6. On a pass, the technical writer updates the docs. The delivery lead then makes a final commit whose message describes the change, for use as the pull request description, and a hook notifies you that the task is ready. The process record (checks, rounds, findings, blockers, tier) stays in the task folder.
 
 ## Tiers
 
@@ -50,9 +50,11 @@ The product owner proposes a tier with you when `done.md` is agreed. The deliver
 | --- | --- | --- | --- |
 | 0 | Existing checks decide correctness, one reasonable implementation, diff reviewable by you in minutes, cheap to undo | Developer only, with the test suite as a Stop hook | Not needed; the task line is the spec |
 | 1 | Some judgement, low blast radius | Developer, then reviewer | Short: outcome, checks, escalation triggers |
-| 2 | Ambiguous, or touches auth, payments, migrations, public APIs or data deletion | Full pipeline, including test engineer and technical writer | Full template |
+| 2 | Ambiguous, or touches auth, payments, migrations, public APIs or data deletion, or any outcome needs an acceptance test | Full pipeline, including test engineer and technical writer | Full template |
 
 Promote a task to the next tier when it produces an escalation, a reviewer finding above minor, or a diff noticeably larger than expected. Size in lines is not a criterion: a one-line change to auth is tier 2.
+
+Acceptance tests belong to tier 2 alone. On tier 1, a unit or service-level test covers an outcome line. If a tier 1 line can only be checked by an acceptance test, the reviewer raises a blocking finding against the tier, and the delivery lead steps the task up to tier 2.
 
 ## Artifacts
 
@@ -83,7 +85,7 @@ Recommendation: (a), matching the outcome text; the test needs changing.
 Evidence: done.md line 4; tests/acceptance/login-rate-limit.test.ts:31
 ```
 
-You answer by creating `resolutions/D-003.md`. A blocker is open while no resolution file has its name, so no file ever changes after it is written. The guard hook refuses an agent write to `resolutions/` and to a blocker that already exists.
+You answer with `scripts/answer.sh D-003 "<answer>"`, which prints the blocker and writes your answer to `resolutions/D-003.md`. With no id, it answers the only open blocker, and with no answer it opens `$EDITOR`. A blocker is open while no resolution file has its name, so no file ever changes after it is written. The guard hook refuses an agent write to `resolutions/` and to a blocker that already exists.
 
 **`verdict.json`** is what the delivery lead routes on:
 
@@ -98,7 +100,7 @@ You answer by creating `resolutions/D-003.md`. A blocker is open while no resolu
 }
 ```
 
-Only `blocking` findings stop the task. Minor findings go into the review summary for you to see.
+Only `blocking` findings stop the task. Minor findings stay in `findings.md` for you to see.
 
 ## Enforcement in Claude Code
 
@@ -112,7 +114,7 @@ Each role is a file in `.claude/agents/`, with its tool list from the Roles tabl
 | Developer cannot finish with failing checks | SubagentStop, matched to developer | Developer | Run the executable checks from `done.md`; exit 2 with the failures |
 | Reviewer must leave a valid verdict | SubagentStop, matched to reviewer | Reviewer | Validate `verdict.json` against the schema; exit 2 if invalid |
 | Delivery lead cannot end without an outcome | Stop | Delivery lead | Block unless a pass verdict plus a final commit at stage `ready`, or an open blocker, exists |
-| You hear about blocks | Notification and Stop | Delivery lead | Desktop or phone notification when a blocker is open |
+| You hear about blocks | Notification and Stop | Delivery lead | Desktop or phone notification, `<NNN> <role>: <status>` with no body, for example `002 delivery-lead: blocked D-001` |
 
 Every Stop and SubagentStop hook checks `stop_hook_active` and lets the agent stop on a second attempt, so a broken check cannot loop forever. Round caps live in `state.json`: after three failed rounds on one stage, the delivery lead escalates instead of retrying.
 
@@ -134,7 +136,7 @@ The delivery lead surfaces each blocker unedited. It can give its own recommenda
 
 - [ ] Is the product owner an agent in a chat with you, or a session you start by hand for each task?
 - [x] Should the developer work in a git worktree, so parallel tasks don't collide? Yes: the whole pipeline for a task runs in one worktree, named after the task folder.
-- [x] Does the delivery lead open the PR itself, or leave a branch for you to open it? Neither, for now: it leaves a branch whose final commit message is the review summary, and you are notified with that message.
+- [x] Does the delivery lead open the PR itself, or leave a branch for you to open it? Neither, for now: it leaves a branch whose final commit message describes the change, and you are notified that it is ready.
 - [ ] Is three rounds the right cap, and should it differ by stage?
 - [ ] Where do notifications go: desktop, phone, or a Slack channel?
 - [ ] At what point does the delivery lead become a shell script calling each role headlessly (`claude -p --agent …`)? `--agent` works with `-p`: a probe session ran that way.

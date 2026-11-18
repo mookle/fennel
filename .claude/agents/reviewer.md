@@ -29,8 +29,14 @@ You have not seen how the work was done and should not ask. Judge the result.
 ## What to check
 
 1. **Coverage.** For each line of the Outcome, find the test that would fail
-   if that line were false. A line with no such test is a finding owned by the
-   test engineer (tier 2) or the developer (tier 1).
+   if that line were false. The tier is in `state.json`.
+   - Tier 2: the test is an acceptance test. A line with no such test is a
+     finding owned by the test engineer.
+   - Tier 1: a unit or service-level test counts. A line with no such test is
+     a finding owned by the developer. If a line can only be checked by an
+     acceptance test, because it crosses services or needs the running stack,
+     the tier is too low: that is a blocking finding owned by the test
+     engineer, with criterion `Tier`.
 2. **Gaps.** Look for behaviour the tests do not exercise: boundaries, error
    paths, inputs the Outcome implies but no test tries. Run things. A gap you
    can demonstrate with a command is worth more than one you suspect.

@@ -11,5 +11,5 @@ How to raise a blocker:
 2. Stop and report that you are blocked.
 
 A blocker is written once. Never edit or delete one, yours or another role's; raise a new one instead.
-The user answers by creating .tasks/<task>/resolutions/D-NNN.md. No agent writes there. A blocker with no resolution file is open.
+The user answers with scripts/answer.sh, which writes .tasks/<task>/resolutions/D-NNN.md. No agent writes there or runs that script. A blocker with no resolution file is open.
 -->

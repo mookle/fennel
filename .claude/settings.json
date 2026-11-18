@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/notify.sh 'Claude Code is waiting for you'"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/notify.sh --hook 'needs input'"
           }
         ]
       }

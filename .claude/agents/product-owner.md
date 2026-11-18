@@ -25,8 +25,10 @@ You do not write code or tests. You write only inside `.tasks/`.
 3. Fill in the task folder:
    - `done.md`: Outcome, Judged criteria, Out of scope, Escalate if.
    - `checks.sh`: every command that must exit 0 for the task to be done.
-     Include the type check, lint, the full test suite, and the acceptance
-     tests for this task.
+     Include the type check, lint and tests of each service the task changes,
+     and the acceptance tests. Add another service's checks only when the task
+     changes something that service consumes: a contract, Compose, or a shared
+     file. Checks that cross services belong in acceptance tests.
    - `facts.md`: constraints and answers the other roles will need (conventions,
      files likely involved, decisions the user made while talking to you).
    - `state.json`: set `tier` (see below) and leave `stage` as `defined`.
@@ -43,7 +45,8 @@ You do not write code or tests. You write only inside `.tasks/`.
 - Judged criteria are for what a command cannot check. Keep them few and
   specific enough that two reviewers would agree.
 - "Escalate if" lists the ambiguities you can foresee, so nobody resolves them
-  by guessing.
+  by guessing. Name what would fail a check or change the Outcome, not a
+  warning that the checks let through.
 
 ## Choosing the tier
 
@@ -53,5 +56,9 @@ You do not write code or tests. You write only inside `.tasks/`.
 - Tier 1: some judgement, low blast radius. Developer, then reviewer.
 - Tier 2: ambiguous, or touches auth, payments, migrations, public APIs or data
   deletion, whatever its size. Full pipeline.
+
+If any line of the Outcome needs an acceptance test, because it crosses
+services or needs the running stack, the task is tier 2. Tiers 0 and 1 are for
+work that unit or service-level tests can prove.
 
 Propose a tier and let the user confirm it. When unsure, pick the higher one.

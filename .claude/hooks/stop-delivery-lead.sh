@@ -22,25 +22,26 @@ blockers_tampered && fail "$BLOCKERS_TAMPERED_MSG"
 if has_open_blocker; then
   open="$(open_blockers | paste -sd' ' -)"
   stray="$(stray_resolutions | paste -sd' ' -)"
-  msg="Open blockers on $TASK: $open. Answer each by creating $TASK_DIR/resolutions/<id>.md, then tell the delivery lead to resume."
+  msg="Open blockers on $TASK: $open. Answer each with: ! scripts/answer.sh <id> \"<answer>\", then tell the delivery lead to resume."
   [ -n "$stray" ] && msg="$msg Resolutions that match no blocker (check the file name): $stray."
-  "$(dirname "$0")/notify.sh" "Blocker on $TASK: $open" || true
+  "$(dirname "$0")/notify.sh" delivery-lead "blocked $open" || true
   # Shown to the user, not to the agent.
   jq -n --arg m "$msg" '{systemMessage: $m}'
   exit 0
 fi
 
 # Tell the user something and let the session stop. Not shown to the agent.
+# tell_user <status> <message>: the status goes in the notification.
 tell_user() {
-  "$(dirname "$0")/notify.sh" "$1" || true
-  jq -n --arg m "$1" '{systemMessage: $m}'
+  "$(dirname "$0")/notify.sh" delivery-lead "$1" || true
+  jq -n --arg m "$2" '{systemMessage: $m}'
   exit 0
 }
 
 [ -f "$TASK_DIR/LOCKED" ] \
-  || tell_user "Task $TASK is not approved. Run: scripts/approve.sh $TASK"
+  || tell_user "not approved" "Task $TASK is not approved. Run: scripts/approve.sh $TASK"
 [ "$(git branch --show-current 2>/dev/null)" = "task/$TASK" ] \
-  || tell_user "Task $TASK runs in its own worktree, on branch task/$TASK. Start the delivery lead there."
+  || tell_user "wrong branch" "Task $TASK runs in its own worktree, on branch task/$TASK. Start the delivery lead there."
 lock_intact \
   || fail "The locked task files have changed since approval. Restore them (git checkout -- $TASK_DIR) and raise a blocker."
 
@@ -59,13 +60,13 @@ if [ -f "$TASK_DIR/checks.sh" ] && ! bash "$TASK_DIR/checks.sh" >/dev/null 2>&1;
 fi
 
 [ "$(jq -r '.stage // ""' "$TASK_DIR/state.json" 2>/dev/null)" = "ready" ] \
-  || fail "Checks and review have passed. Finish the task: set stage to ready in state.json, then commit everything with the review summary as the commit message (see Finishing the task)."
+  || fail "Checks and review have passed. Finish the task: set stage to ready in state.json, then commit everything with the summary as the commit message (see Finishing the task)."
 [ -z "$(git status --porcelain 2>/dev/null)" ] \
-  || fail "There are uncommitted changes. Commit everything with the review summary as the commit message, then stop."
+  || fail "There are uncommitted changes. Commit everything with the summary as the commit message, then stop."
 
-# The final commit message is the review summary. Send it to the user.
+# The final commit message is the summary. Show it to the user.
 summary="$(git log -1 --format=%B)"
-"$(dirname "$0")/notify.sh" "Ready for review: $TASK" "$summary" || true
+"$(dirname "$0")/notify.sh" delivery-lead ready || true
 jq -n --arg m "Task $TASK is ready for review on branch task/$TASK.
 
 $summary" '{systemMessage: $m}'

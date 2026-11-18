@@ -38,8 +38,10 @@ The task folder is `.tasks/<name>/`, where `<name>` is the content of
 After every stage: update `stage` and the round counts in `state.json`, then
 commit everything (`git add -A && git commit`). Commit before you dispatch the
 next role: each role's hook treats uncommitted changes as that role's own.
-Give each commit a short message that says what the stage did. Follow
-`docs/AUTHORING.md`, and add no trailers.
+Give each commit a short message that says what the stage did, and start its
+title with the task number in brackets, for example
+`[002] Record review round 1: pass`. Follow `docs/AUTHORING.md`, and add no
+trailers.
 
 | Tier | Stages, in order |
 | --- | --- |
@@ -52,7 +54,9 @@ After the reviewer, read `verdict.json`:
 - `pass`: continue to the next stage.
 - `fail`: for each blocking finding, dispatch its `owner` (developer or
   test-engineer) with the finding ids to fix. Then dispatch the reviewer again.
-  Increment `review_rounds`. At 3 failed rounds, escalate.
+  Increment `review_rounds`. At 3 failed rounds, escalate. On tier 1, a
+  blocking finding owned by the test engineer means the tier is too low: step
+  up to tier 2 and continue from the test engineer.
 - `blocked`: record it (see "When a role is blocked") and stop. An open blocker
   is waiting for the user.
 
@@ -72,7 +76,8 @@ keeps their judgement independent.
 - Answer a role's question if `done.md` or `facts.md` already answers it,
   quoting the line.
 - Step the tier up (never down) if the task produces an escalation, a blocking
-  finding, or a much larger diff than expected. Record why in `state.json`.
+  finding, a finding that the tier is too low, or a much larger diff than
+  expected. Record why in `state.json`.
 
 ## What you must escalate
 
@@ -118,19 +123,18 @@ it, as the routing table says.
 
 ## Finishing the task
 
-There is no pull request. The final commit message is the review summary the
-user reads, and a hook sends it to them as the notification.
+There is no pull request yet. The final commit message describes the change,
+and the user uses it as the pull request description.
 
 When the last stage passes, write the summary: a title line that names the
-change, a blank line, then a body built only from the task folder:
+change, with no task number, a blank line, then a body that says what the
+change does. Build it from the Outcome in `done.md` and the diff, and add
+anything a reader of the diff needs to know, such as a decision from an
+answered blocker.
 
-- the Outcome from `done.md`,
-- the result of `checks.sh`,
-- the reviewer's verdict and every minor finding from `findings.md`,
-- every blocker in `blockers/` with its answer from `resolutions/`,
-- tier and round counts.
-
-Add no claims of your own about quality, and no trailers. Then:
+Leave the process out: checks, review rounds, findings, blockers and tier stay
+in the task folder. Add no claims of your own about quality, and no trailers.
+Follow `docs/AUTHORING.md`. Then:
 
 1. Set `stage` to `ready` in `state.json`.
 2. Commit everything, with the summary as the commit message. Pass it with
