@@ -4,7 +4,7 @@ Fennel is a vertical slice of a two-sided marketplace, inspired by a "redesign" 
 
 ## Goals
 
-This build has two goals: to improve my understanding of Go, and to experiment with agentic AI in a language I already know well - Elixir. To ensure I get the most out of the learning experience, the use of AI will be minimised where Go is being written.
+This build has two goals: to improve my understanding of Go, and to experiment with agentic AI in a language I already know well - Elixir.
 
 ## What is being built
 
