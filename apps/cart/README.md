@@ -4,11 +4,15 @@ The Cart service, in Elixir, with Bandit and Plug for HTTP. `docs/services/cart.
 
 ## Running the service
 
-Compose runs the service as `cart`, and it listens on host port 4000, on loopback only (ADR-0033). From the repository root, start it with `docker compose up -d --build cart`. The service depends on no other service, so it starts alone.
+Compose runs the service as `cart`, and it listens on host port 4000, on loopback only (ADR-0033). From the repository root, start it with `docker compose up -d --build cart`. The service does not wait for any other service, so it starts alone, without `product`.
 
 The image runs a `mix release`. The service reads its configuration from the environment, once, at start. A changed value takes a restart.
 
 - `FENNEL_CART_PORT` is the listen port. It defaults to `4000`.
+- `FENNEL_CART_PRODUCT_URL` is the base URL of the `product` API. Compose sets it to `http://product:8080/v1`.
+- `FENNEL_CART_PRODUCT_TOKEN` is the bearer token `cart` presents to `product`. Compose sets it from the same value it gives `product` as `FENNEL_PRODUCT_TOKEN_CART`.
+
+The release refuses to start if `FENNEL_CART_PRODUCT_URL` or `FENNEL_CART_PRODUCT_TOKEN` is unset or empty, and its error names the variable. A value of only whitespace counts as empty. `mix test` needs neither.
 
 `GET /healthz` reports that the service is up. It takes no token:
 

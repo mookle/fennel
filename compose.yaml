@@ -5,6 +5,10 @@
 
 name: fennel
 
+# The token cart presents to product. The value is for local use only. Both
+# services refer to it through the alias, so it has one source.
+x-cart-product-token: &cart-product-token cart-token
+
 services:
   product:
     build: ./apps/product
@@ -12,8 +16,9 @@ services:
       FENNEL_PRODUCT_DSN: postgres://product:product@product-db:5432/product
       # One token per caller (ADR-0033). The part of the name after
       # FENNEL_PRODUCT_TOKEN_ names the caller. These values are for local
-      # use only. cart takes its token when it joins the stack, and dev is
-      # for calling product by hand.
+      # use only. cart holds its own token, and dev is for calling product
+      # by hand.
+      FENNEL_PRODUCT_TOKEN_CART: *cart-product-token
       FENNEL_PRODUCT_TOKEN_DEV: dev-token
     ports:
       # Loopback only, as for the database.
@@ -49,6 +54,11 @@ services:
 
   cart:
     build: ./apps/cart
+    environment:
+      # cart reaches product on the Compose network. Neither service waits for
+      # the other at start, so cart starts without product.
+      FENNEL_CART_PRODUCT_URL: http://product:8080/v1
+      FENNEL_CART_PRODUCT_TOKEN: *cart-product-token
     ports:
       # Loopback only, as for product.
       - "127.0.0.1:4000:4000"
