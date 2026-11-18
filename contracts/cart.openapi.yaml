@@ -1,0 +1,116 @@
+openapi: 3.1.0
+info:
+  title: Fennel cart
+  version: "0.1.0"
+  description: >
+    The buyer-facing API of the cart service, which owns the Cart, its
+    CartItems and the Purchase that checkout submits. At this stage the
+    service is a facade with fixed responses. It holds no state and validates
+    no input. Creating a Cart always returns the same cart id, adding a
+    CartItem echoes the request's sku_id and quantity, and checkout always
+    returns the same purchase_id. Any cart id in the path gets the same
+    answer. The examples carry the fixed values. The API takes no auth for
+    now, because no ADR names a caller of cart.
+servers:
+  - url: http://cart:4000/v1
+    description: Base URL on the Compose network, where `cart` is the service name
+security: []
+tags:
+  - name: carts
+    description: Cart management and checkout
+
+paths:
+  /carts:
+    post:
+      tags: [carts]
+      summary: Create a Cart
+      description: The facade takes no request body and returns the same cart id on every call.
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+              examples:
+                default: { $ref: '#/components/examples/CartCreated' }
+
+  /carts/{id}/items:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid }, description: The cart id }
+    post:
+      tags: [carts]
+      summary: Add a CartItem to a Cart
+      description: The facade echoes sku_id and quantity from the request, for any cart id.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CartItemWrite' }
+            examples:
+              default: { $ref: '#/components/examples/CartItemAdd' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CartItem' }
+              examples:
+                default: { $ref: '#/components/examples/CartItemAdd' }
+
+  /carts/{id}/checkout:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid }, description: The cart id }
+    post:
+      tags: [carts]
+      summary: Check out a Cart and submit a Purchase
+      description: The facade takes no request body and returns the same purchase_id on every call, for any cart id.
+      responses:
+        '202':
+          description: Accepted. The Purchase is submitted, and the per-shop orders follow asynchronously.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PurchaseSubmitted' }
+              examples:
+                default: { $ref: '#/components/examples/PurchaseSubmittedExample' }
+
+components:
+  schemas:
+    Cart:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+    CartItemWrite:
+      type: object
+      required: [sku_id, quantity]
+      properties:
+        sku_id: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1 }
+    CartItem:
+      type: object
+      required: [sku_id, quantity]
+      properties:
+        sku_id: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1 }
+    PurchaseSubmitted:
+      type: object
+      required: [purchase_id]
+      properties:
+        purchase_id: { type: string, format: uuid }
+
+  examples:
+    # The fixed values the facade returns. Cart.Router in apps/cart holds the
+    # same ids.
+    CartCreated:
+      summary: The fixed cart id
+      value:
+        id: "019e8a3c-5d20-7a41-9c3e-2b7f1d6e4a80"
+    CartItemAdd:
+      summary: A CartItem, which the response echoes from the request
+      value:
+        sku_id: "019df244-fa20-72b6-a1cf-300ff7354d1d"
+        quantity: 2
+    PurchaseSubmittedExample:
+      summary: The fixed purchase id
+      value:
+        purchase_id: "019e8a3c-7f14-7b92-8d05-6c1a9e3f2b57"

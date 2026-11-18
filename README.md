@@ -21,7 +21,7 @@ The pipeline starts at adding a product to the cart and ends at order acceptance
 1. **`CLAUDE.md`**. Designed for AI agents, but a useful summary for all. Contains conventions, load-bearing invariants a build must not violate, and guidance on how to interact with the project. Agents **must** read this first.
 2. **`docs/ARCHITECTURE.md`**. The canonical design: domains, service boundaries, domain language, the diagram, deployment, and data conventions.
 3. **`docs/services/product.md`**, **`docs/services/cart.md`** and **`docs/services/order.md`**. The per-service design docs.
-4. **`contracts/`**. The wire contracts the services build against: `product.openapi.yaml` for synchronous REST, and `events.md` for the asynchronous events with their JSON Schemas.
+4. **`contracts/`**. The wire contracts the services build against: `product.openapi.yaml` and `cart.openapi.yaml` for synchronous REST, and `events.md` for the asynchronous events with their JSON Schemas.
 5. **`docs/decisions/README.md`**. The index of the architectural decision records (ADRs) and the rules around their creation.
 6. **`roadmap.md`**. A working document / scratchpad for co-ordinating ongoing work between authors.
 7. **`docs/AUTHORING.md`.** The authoring style guide, relevant when writing prose.

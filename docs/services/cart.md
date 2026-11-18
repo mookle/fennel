@@ -54,6 +54,10 @@ The buyer gets "purchase submitted" and the `purchase_id`. The per-shop orders a
 
 Submission is producer-agnostic by design. A future bespoke or custom-order front end can publish `purchase.submitted` without a cart (ADR-0013).
 
+## API surface
+
+`contracts/cart.openapi.yaml` holds the contract for the buyer-facing API: create a Cart, add a CartItem, and check out.
+
 ## Product API dependency
 
 `cart` is the only synchronous consumer of `product`. It uses the catalogue query, the SKU lookup and batch resolution, and the shipping quote. `contracts/product.openapi.yaml` holds the contract.
