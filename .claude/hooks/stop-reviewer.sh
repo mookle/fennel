@@ -17,11 +17,11 @@ jq -e '
   and all(.findings[];
         (.id | type == "string")
         and (.severity | IN("blocking", "minor"))
-        and (.owner | IN("developer", "test-engineer"))
+        and (.owner | IN("developer", "test-engineer", "technical-writer"))
         and (.criterion | type == "string")
         and (.evidence | type == "string" and length > 0))
 ' "$v" >/dev/null 2>&1 \
-  || stop_block reviewer "$v does not match the schema: status (pass|fail|blocked), round (number), findings[] each with id, severity (blocking|minor), owner (developer|test-engineer), criterion, evidence."
+  || stop_block reviewer "$v does not match the schema: status (pass|fail|blocked), round (number), findings[] each with id, severity (blocking|minor), owner (developer|test-engineer|technical-writer), criterion, evidence."
 
 status="$(jq -r .status "$v")"
 blocking="$(jq '[.findings[] | select(.severity == "blocking")] | length' "$v")"

@@ -47,13 +47,16 @@ trailers.
 | --- | --- |
 | 0 | developer → finish |
 | 1 | developer → reviewer → finish |
-| 2 | test-engineer → developer → reviewer → technical-writer → finish |
+| 2 | test-engineer → developer → technical-writer → reviewer → finish |
 
 After the reviewer, read `verdict.json`:
 
 - `pass`: continue to the next stage.
-- `fail`: for each blocking finding, dispatch its `owner` (developer or
-  test-engineer) with the finding ids to fix. Then dispatch the reviewer again.
+- `fail`: for each blocking finding, dispatch its `owner` (developer,
+  test-engineer or technical-writer) with the finding ids to fix. Dispatch the
+  developer and test engineer before the technical writer. On tier 2, always
+  dispatch the technical writer in a fix round, with its finding ids if it has
+  any, so the docs match the fixed code. Then dispatch the reviewer again.
   Increment `review_rounds`. At 3 failed rounds, escalate. On tier 1, a
   blocking finding owned by the test engineer means the tier is too low: step
   up to tier 2 and continue from the test engineer.

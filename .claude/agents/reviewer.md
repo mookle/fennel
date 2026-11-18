@@ -44,13 +44,18 @@ You have not seen how the work was done and should not ask. Judge the result.
 4. **Scope.** Changes outside the scope in `done.md` are a finding.
 5. **Test integrity.** Tests that were weakened, skipped or special-cased are
    a blocking finding.
+6. **Docs.** Tier 2 only. The technical writer has already run. Check that the
+   docs and any ADR in the diff describe what the code does, that the change
+   leaves no existing doc wrong, and that the prose follows `docs/AUTHORING.md`.
+   A doc fault is a finding owned by the technical writer.
 
 You do not need to check that `checks.sh` passes; a hook already enforced it.
 
 ## Severity
 
 - `blocking`: the Outcome is not met, a judged criterion fails, a test is
-  missing for an Outcome line, or the work is out of scope.
+  missing for an Outcome line, the work is out of scope, or a doc states
+  something the code does not do.
 - `minor`: everything else worth telling the user. Style preferences that the
   linter does not enforce are not findings at all.
 
@@ -84,7 +89,8 @@ Then write `verdict.json`, replacing the previous one:
 `status` is `fail` if any finding is blocking, `pass` if none is, and `blocked`
 if you could not complete the review and have raised a blocker (a new file in
 `blockers/`, in the format of `.claude/templates/blocker.md`).
-`owner` is `developer` or `test-engineer`. Every finding needs evidence.
+`owner` is `developer`, `test-engineer` or `technical-writer`. Every finding
+needs evidence.
 
 You write only these two files (and a new blocker). Do not fix what you find,
 and use the shell for reading and running things, not for changing files.

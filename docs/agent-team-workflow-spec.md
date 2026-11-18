@@ -24,23 +24,23 @@ Six agent roles plus you, named after the matching jobs on a real dev team. Ever
 | Delivery lead | Dispatching the next role, retries, tier step-ups, writing the summary commit | Task folder | `state.json`, the final commit message | `done.md`, tests, code, blockers raised by other roles, `resolutions/` | Agent(listed roles), Read, Bash (git, gh) |
 | Test engineer | Acceptance tests from `done.md`, written to fail first | `done.md`, `facts.md`, public interfaces | `tests/acceptance/` | Implementation (no reading it either) | Read, Grep, Glob, Write, Edit, Bash |
 | Developer | Implementation and unit tests until all checks pass | Task folder, repo | Source, unit tests | `done.md`, `tests/acceptance/` | Read, Grep, Glob, Write, Edit, Bash |
-| Reviewer | Test coverage of every outcome line, probing for gaps, ruling on judged criteria | Task folder, diff, repo | `findings.md`, `verdict.json` | Everything else | Read, Grep, Glob, Bash (read-only commands) |
-| Technical writer (tier 2) | Docs and ADRs from the diff and the task folder | Diff, `done.md`, `blockers/`, `resolutions/` | Docs, ADRs | Code, tests | Read, Grep, Glob, Write, Edit |
+| Reviewer | Test coverage of every outcome line, probing for gaps, ruling on judged criteria, and on tier 2, checking the docs against the code | Task folder, diff, repo | `findings.md`, `verdict.json` | Everything else | Read, Grep, Glob, Bash (read-only commands) |
+| Technical writer (tier 2) | Docs and ADRs from the diff and the task folder, before review | Diff, `done.md`, `findings.md`, `blockers/`, `resolutions/` | Docs, ADRs | Code, tests | Read, Grep, Glob, Write, Edit |
 
 The delivery lead may retry a step, re-route, or answer a question that `done.md` or `facts.md` already answers. It may not interpret an ambiguous spec, change scope, waive a finding, or step a tier down.
 
 ## Workflow
 
-&#91;embedded content: tier 2 workflow · 6 stages, 2 fault loops, 1 escalation path\]
+&#91;embedded content: tier 2 workflow · 6 stages, 3 fault loops, 1 escalation path\]
 
-The delivery lead dispatches each stage in order and routes on `verdict.json`: a code fault goes back to the developer, a test fault to the test engineer. Tier 1 skips the test engineer and technical writer; tier 0 is the developer alone.
+The delivery lead dispatches each stage in order and routes on `verdict.json`: a code fault goes back to the developer, a test fault to the test engineer, and a doc fault to the technical writer. Tier 1 skips the test engineer and technical writer; tier 0 is the developer alone.
 
 1. The product owner drafts `done.md` with you. Once you approve it with `scripts/approve.sh`, it locks, and the task moves into its own worktree, named after the task folder, on branch `task/<name>`. Every later stage runs there. Pass `--start` to start the delivery lead in the new worktree. The delivery lead commits after each stage, with the task number as a prefix, for example `[002] Record review round 1: pass`.
 2. The test engineer writes acceptance tests that fail against the current code.
 3. The developer implements until every executable check passes.
-4. The reviewer checks coverage and the judged criteria, then writes a verdict.
-5. On a fail, the owner of each blocking finding fixes it and the reviewer runs again, up to three rounds.
-6. On a pass, the technical writer updates the docs. The delivery lead then makes a final commit whose message describes the change, for use as the pull request description, and a hook notifies you that the task is ready. The process record (checks, rounds, findings, blockers, tier) stays in the task folder.
+4. The technical writer updates the docs.
+5. The reviewer checks coverage, the judged criteria and the docs, then writes a verdict.
+6. On a fail, the owner of each blocking finding fixes it, the technical writer brings the docs in line with the fixes, and the reviewer runs again, up to three rounds. On a pass, the delivery lead makes a final commit whose message describes the change, for use as the pull request description, and a hook notifies you that the task is ready. The process record (checks, rounds, findings, blockers, tier) stays in the task folder.
 
 ## Tiers
 
