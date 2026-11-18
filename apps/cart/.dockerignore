@@ -1,0 +1,9 @@
+# The build needs the Mix project, its config and its sources, and nothing
+# that only the tests read. The build stage fetches and compiles the
+# dependencies itself.
+_build
+deps
+test
+Dockerfile
+.dockerignore
+README.md

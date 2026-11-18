@@ -47,5 +47,27 @@ services:
       retries: 10
       start_period: 10s
 
+  cart:
+    build: ./apps/cart
+    ports:
+      # Loopback only, as for product.
+      - "127.0.0.1:4000:4000"
+    healthcheck:
+      # The runtime image has no curl, so bash opens the connection through
+      # /dev/tcp and checks the status line of GET /healthz. Debian's sh is
+      # dash, which has no /dev/tcp, so the test names bash.
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/$${FENNEL_CART_PORT:-4000}
+          && printf 'GET /healthz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3
+          && head -n 1 <&3 | grep -q ' 200 '
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
 volumes:
   product-db-data:

@@ -1,0 +1,14 @@
+{
+  "tier": 2,
+  "stage": "ready",
+  "review_rounds": 1,
+  "blocked": null,
+  "tier_changes": [
+    {
+      "from": 1,
+      "to": 2,
+      "stage": "fix-round-1",
+      "reason": "Review round 1 blocking finding F-1 needs an acceptance test that only the test engineer may write; user chose option (a) in resolutions/D-001.md"
+    }
+  ]
+}

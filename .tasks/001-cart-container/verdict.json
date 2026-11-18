@@ -1,0 +1,8 @@
+{
+  "status": "pass",
+  "round": 2,
+  "findings": [
+    {"id": "F-3", "severity": "minor", "owner": "developer",
+     "criterion": "Judged criterion 4", "evidence": "apps/cart/README.md:3 (F-2 unresolved)"}
+  ]
+}
